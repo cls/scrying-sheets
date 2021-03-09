@@ -32,10 +32,10 @@ class CardFace:
         self.mana_cost = mana_cost
 
 class Card (CardFace):
-    def __init__(self, count, name, url, type_line, mana_cost, back_faces):
+    def __init__(self, name, url, type_line, mana_cost, back_faces, tokens):
         super().__init__(name, url, type_line, mana_cost)
-        self.count = count
         self.back_faces = back_faces
+        self.tokens = tokens
 
 class Section:
     def __init__(self, name, cards=None):
@@ -44,7 +44,7 @@ class Section:
 
     @property
     def total_count(self):
-        return sum(card.count for card in self.cards)
+        return sum(count or 0 for count, card in self.cards)
 
 class Symbol:
     def __init__(self, text, scryfall_url):
@@ -93,61 +93,94 @@ def parse_mana(mana_cost_json):
 
 cache = {}
 
+def get_card(url, params=None, is_token=False):
+    cache_index = (url, tuple(params.items()) if params else ())
+
+    if cache_index in cache:
+        return cache[cache_index]
+
+    card_json = scryfall.get(url, params=params).json()
+
+    front_face_json = card_json
+
+    card_url = card_json['scryfall_uri']
+
+    back_faces = []
+
+    if 'card_faces' in card_json:
+        front_face_json = card_json['card_faces'][0]
+        if card_json['layout'] in ('adventure', 'modal_dfc', 'split'):
+            for face_json in card_json['card_faces'][1:]:
+                face_name = face_json['name']
+                if card_json['layout'] == 'modal_dfc':
+                    prefix, query, postfix = card_url.partition('?')
+                    face_url = prefix + '?back'
+                    if postfix:
+                        face_url += '&' + postfix
+                else:
+                    face_url = card_url
+                face_type_line = face_json['type_line']
+                face_mana_cost = parse_mana(face_json['mana_cost'])
+                face = CardFace(face_name, face_url, face_type_line, face_mana_cost)
+                back_faces.append(face)
+
+    card_name = front_face_json['name']
+
+    if card_json['layout'] == 'token':
+        card_name += ' Token'
+
+    card_type_line = front_face_json['type_line']
+    card_mana_cost = parse_mana(front_face_json['mana_cost'])
+
+    tokens = []
+
+    if not is_token:
+        for related_card_json in card_json.get('all_parts', []):
+            if related_card_json['component'] == 'token':
+                token = get_card(related_card_json['uri'], is_token=True)
+                tokens.append((None, token))
+
+    card = Card(card_name, card_url, card_type_line, card_mana_cost, back_faces, tokens)
+
+    cache[cache_index] = card
+
+    return card
+
 def generate_decklist(deck_path):
     sections = []
     section = None
+    tokens = Section("Tokens")
 
     with open(deck_path) as deck_file:
         for deck_line in map(str.strip, deck_file):
             if not deck_line:
                 section = None
-            elif section is None:
+                continue
+
+            if section is None:
                 section = Section(deck_line)
                 sections.append(section)
+                continue
+
+            match = card_pattern.fullmatch(deck_line)
+
+            name, code, number = cache_index = match.group('name', 'code', 'number')
+
+            if number:
+                card = get_card('/cards/{}/{}'.format(code.lower(), number))
             else:
-                match = card_pattern.fullmatch(deck_line)
-                name, code, number = cache_index = match.group('name', 'code', 'number')
-                if cache_index in cache:
-                    card_json = cache[cache_index]
-                else:
-                    if number:
-                        card_json = scryfall.get('/cards/{}/{}'.format(code.lower(), number)).json()
-                    else:
-                        params = {'exact': name}
-                        if match.group('code'):
-                            params['set'] = match.group('code')
-                        card_json = scryfall.get('/cards/named', params=params).json()
-                    cache[cache_index] = card_json
+                params = {'exact': name}
+                if code:
+                    params['set'] = code
+                card = get_card('/cards/named', params=params)
 
-                card_count = int(match.group('count'))
-                card_url = card_json['scryfall_uri']
+            count = int(match.group('count'))
 
-                front_face_json = card_json
-                back_faces = []
+            section.cards.append((count, card))
+            tokens.cards.extend(card.tokens)
 
-                if 'card_faces' in card_json:
-                    front_face_json = card_json['card_faces'][0]
-                    if card_json['layout'] in ('adventure', 'modal_dfc', 'split'):
-                        for face_json in card_json['card_faces'][1:]:
-                            face_name = face_json['name']
-                            if card_json['layout'] == 'modal_dfc':
-                                prefix, query, postfix = card_url.partition('?')
-                                face_url = prefix + '?back'
-                                if postfix:
-                                    face_url += '&' + postfix
-                            else:
-                                face_url = card_url
-                            face_type_line = face_json['type_line']
-                            face_mana_cost = parse_mana(face_json['mana_cost'])
-                            face = CardFace(face_name, face_url, face_type_line, face_mana_cost)
-                            back_faces.append(face)
-
-                card_name = front_face_json['name']
-                card_type_line = front_face_json['type_line']
-                card_mana_cost = parse_mana(front_face_json['mana_cost'])
-
-                card = Card(card_count, card_name, card_url, card_type_line, card_mana_cost, back_faces)
-                section.cards.append(card)
+    if tokens.cards:
+        sections.append(tokens)
 
     title, _ = os.path.splitext(os.path.basename(deck_path))
 

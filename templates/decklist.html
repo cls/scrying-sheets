@@ -10,12 +10,20 @@
   <table>
     {% for section in sections %}
       <tr>
-        <th>{{ section.total_count }}</th>
+        {% if section.total_count %}
+          <th>{{ section.total_count }}</th>
+        {% else %}
+          <th></th>
+        {% endif %}
         <th>{{ section.name }}</th>
       </tr>
-      {% for card in section.cards %}
+      {% for count, card in section.cards %}
         <tr>
-          <td>{{ card.count }}</td>
+          {% if count %}
+            <td>{{ count }}</td>
+          {% else %}
+            <td></td>
+          {% endif %}
           <td>
             <div class="name">
               <a href="{{ card.url }}" title="{{ card.type_line }}">{{ card.name }}</a>
