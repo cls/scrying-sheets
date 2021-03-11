@@ -46,17 +46,23 @@ class Symbol:
         self.scryfall_url = scryfall_url
         self.url = None
 
-    def cache(self):
+    def save(self):
         if self.url:
             return self.url
 
         self.url = 'img/{}'.format(os.path.basename(self.scryfall_url))
+
+        query_pos = self.url.find('?')
+        if query_pos >= 0:
+            self.url = self.url[:query_pos]
 
         if not os.path.exists('img'):
             os.mkdir('img')
 
         with open(self.url, 'wb') as symbol_file:
             symbol_file.write(scryfall.get(self.scryfall_url).content)
+
+        return self.url
 
 scryfall = Scryfall()
 
@@ -70,8 +76,8 @@ env.filters['rsquo'] = lambda s: s.replace('\'', '&rsquo;')
 template = env.get_template('decklist.html')
 
 card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
-
 mana_pattern = re.compile(r'\{[^}]+\}')
+set_pattern = re.compile(r'\(([A-Z0-9]+)\)')
 
 symbols = {}
 
@@ -84,7 +90,7 @@ def parse_mana(mana_cost_json):
     mana_cost = []
     for mana in mana_pattern.findall(mana_cost_json):
         symbol = symbols[mana]
-        symbol.cache()
+        symbol.save()
         mana_cost.append(symbol)
     return mana_cost
 
@@ -115,22 +121,39 @@ def get_card(url, params=None):
 
     return card
 
+sets = {}
+
+def repl_set_symbol(match):
+    code = match.group(1).lower()
+    if code in sets:
+        return sets[code]
+    set_json = scryfall.get('/sets/{}'.format(code)).json()
+    set_symbol = Symbol(set_json["name"], set_json['icon_svg_uri'])
+    sets[code] = set_symbol
+    set_symbol.save()
+    return '<img src="{}" alt="{}" title="{}">'.format(set_symbol.url, match.group(), set_symbol.text)
+
 def generate_decklist(deck_path):
+    title = None
     sections = []
     section = None
 
     with open(deck_path) as deck_file:
-        for deck_line in map(str.strip, deck_file):
-            if not deck_line:
+        for line in map(str.strip, deck_file):
+            if not line:
                 section = None
                 continue
 
+            if not title:
+                title = line
+                continue
+
             if section is None:
-                section = Section(deck_line)
+                section = Section(line)
                 sections.append(section)
                 continue
 
-            match = card_pattern.fullmatch(deck_line)
+            match = card_pattern.fullmatch(line)
 
             name, code, number = cache_index = match.group('name', 'code', 'number')
 
@@ -146,13 +169,13 @@ def generate_decklist(deck_path):
 
             section.cards.append((count, card))
 
-    title, _ = os.path.splitext(os.path.basename(deck_path))
+    deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
-    title_slug = title.lower().replace(' ', '-')
+    html_path = '{}.html'.format(deck_path_stem)
 
-    html_path = '{}.html'.format(title_slug)
+    headline = set_pattern.sub(repl_set_symbol, title)
 
-    html = template.render(title=title, sections=sections)
+    html = template.render(title=title, headline=headline, sections=sections)
 
     with open(html_path, 'w') as html_file:
         html_file.write(html)
