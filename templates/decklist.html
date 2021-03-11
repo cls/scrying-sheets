@@ -9,52 +9,27 @@
   <h1>{{ title }}</h1>
   <table>
     {% for section in sections %}
+    <tbody>
       <tr>
-        {% if section.total_count %}
-          <th>{{ section.total_count }}</th>
-        {% else %}
-          <th></th>
-        {% endif %}
+        <th>{{ section.total_count or "" }}</th>
         <th>{{ section.name }}</th>
       </tr>
       {% for count, card in section.cards %}
-        <tr>
-          {% if count %}
-            <td>{{ count }}</td>
-          {% else %}
-            <td></td>
+      <tr>
+        <td>{{ count or "" }}</td>
+        <td>
+          <div class="name">
+            <a href="{{ card.url }}" title="{{ card.type_line|mdash }}">{{ card.name|rsquo }}</a>
+          </div>
+          {% if card.mana_cost %}
+          <div class="mana">
+            {% for symbol in card.mana_cost -%} <img src="{{ symbol.url }}" alt="{{ symbol.text }}"> {%- endfor %}
+          </div>
           {% endif %}
-          <td>
-            <div class="name">
-              <a href="{{ card.url }}" title="{{ card.type_line }}">{{ card.name }}</a>
-            </div>
-            {% if card.mana_cost %}
-              <div class="mana">
-                {% for symbol in card.mana_cost -%}
-                  <img src="{{ symbol.url }}" alt="{{ symbol.text }}">
-                {%- endfor %}
-              </div>
-            {% endif %}
-          </td>
-        </tr>
-        {% for face in card.back_faces %}
-          <tr>
-            <td></td>
-            <td>
-              <div class="name">
-                <a href="{{ face.url }}" title="{{ face.type_line }}">{{ face.name }}</a>
-              </div>
-              {% if face.mana_cost %}
-                <div class="mana">
-                  {% for symbol in face.mana_cost -%}
-                    <img src="{{ symbol.url }}" alt="{{ symbol.text }}">
-                  {%- endfor %}
-                </div>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
+        </td>
+      </tr>
       {% endfor %}
+    </tbody>
     {% endfor %}
   </table>
 </body>

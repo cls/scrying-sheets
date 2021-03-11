@@ -24,18 +24,12 @@ class Scryfall:
 
         return response
 
-class CardFace:
+class Card:
     def __init__(self, name, url, type_line, mana_cost):
         self.name = name
         self.url = url
         self.type_line = type_line
         self.mana_cost = mana_cost
-
-class Card (CardFace):
-    def __init__(self, name, url, type_line, mana_cost, back_faces, tokens):
-        super().__init__(name, url, type_line, mana_cost)
-        self.back_faces = back_faces
-        self.tokens = tokens
 
 class Section:
     def __init__(self, name, cards=None):
@@ -44,7 +38,7 @@ class Section:
 
     @property
     def total_count(self):
-        return sum(count or 0 for count, card in self.cards)
+        return sum(count for count, card in self.cards)
 
 class Symbol:
     def __init__(self, text, scryfall_url):
@@ -70,9 +64,12 @@ loader = jinja2.FileSystemLoader('templates')
 
 env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
 
+env.filters['mdash'] = lambda s: s.replace('\N{EM DASH}', '&mdash;')
+env.filters['rsquo'] = lambda s: s.replace('\'', '&rsquo;')
+
 template = env.get_template('decklist.html')
 
-card_pattern = re.compile(r'(?P<count>[0-9]+) +(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
+card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
 
 mana_pattern = re.compile(r'\{[^}]+\}')
 
@@ -93,7 +90,7 @@ def parse_mana(mana_cost_json):
 
 cache = {}
 
-def get_card(url, params=None, is_token=False):
+def get_card(url, params=None):
     cache_index = (url, tuple(params.items()) if params else ())
 
     if cache_index in cache:
@@ -101,46 +98,18 @@ def get_card(url, params=None, is_token=False):
 
     card_json = scryfall.get(url, params=params).json()
 
-    front_face_json = card_json
-
     card_url = card_json['scryfall_uri']
 
-    back_faces = []
-
-    if 'card_faces' in card_json:
+    if 'card_faces' in card_json and card_json['layout'] != 'split':
         front_face_json = card_json['card_faces'][0]
-        if card_json['layout'] in ('adventure', 'modal_dfc', 'split'):
-            for face_json in card_json['card_faces'][1:]:
-                face_name = face_json['name']
-                if card_json['layout'] == 'modal_dfc':
-                    prefix, query, postfix = card_url.partition('?')
-                    face_url = prefix + '?back'
-                    if postfix:
-                        face_url += '&' + postfix
-                else:
-                    face_url = card_url
-                face_type_line = face_json['type_line']
-                face_mana_cost = parse_mana(face_json['mana_cost'])
-                face = CardFace(face_name, face_url, face_type_line, face_mana_cost)
-                back_faces.append(face)
+    else:
+        front_face_json = card_json
 
     card_name = front_face_json['name']
-
-    if card_json['layout'] == 'token':
-        card_name += ' Token'
-
     card_type_line = front_face_json['type_line']
     card_mana_cost = parse_mana(front_face_json['mana_cost'])
 
-    tokens = []
-
-    if not is_token:
-        for related_card_json in card_json.get('all_parts', []):
-            if related_card_json['component'] == 'token':
-                token = get_card(related_card_json['uri'], is_token=True)
-                tokens.append((None, token))
-
-    card = Card(card_name, card_url, card_type_line, card_mana_cost, back_faces, tokens)
+    card = Card(card_name, card_url, card_type_line, card_mana_cost)
 
     cache[cache_index] = card
 
@@ -149,7 +118,6 @@ def get_card(url, params=None, is_token=False):
 def generate_decklist(deck_path):
     sections = []
     section = None
-    tokens = Section("Tokens")
 
     with open(deck_path) as deck_file:
         for deck_line in map(str.strip, deck_file):
@@ -174,13 +142,9 @@ def generate_decklist(deck_path):
                     params['set'] = code
                 card = get_card('/cards/named', params=params)
 
-            count = int(match.group('count'))
+            count = int(match.group('count') or 0)
 
             section.cards.append((count, card))
-            tokens.cards.extend(card.tokens)
-
-    if tokens.cards:
-        sections.append(tokens)
 
     title, _ = os.path.splitext(os.path.basename(deck_path))
 
