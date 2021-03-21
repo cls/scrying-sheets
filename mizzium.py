@@ -24,12 +24,17 @@ class Scryfall:
 
         return response
 
-class Card:
+class CardFace:
     def __init__(self, name, url, type_line, mana_cost):
         self.name = name
         self.url = url
         self.type_line = type_line
         self.mana_cost = mana_cost
+
+class Card (CardFace):
+    def __init__(self, name, url, type_line, mana_cost, back_faces):
+        super().__init__(name, url, type_line, mana_cost)
+        self.back_faces = back_faces
 
 class Section:
     def __init__(self, name, cards=None):
@@ -104,18 +109,38 @@ def get_card(url, params=None):
 
     card_json = scryfall.get(url, params=params).json()
 
+    front_face_json = card_json
+
     card_url = card_json['scryfall_uri']
 
-    if 'card_faces' in card_json and card_json['layout'] != 'split':
+    back_faces = []
+
+    if 'card_faces' in card_json:
         front_face_json = card_json['card_faces'][0]
-    else:
-        front_face_json = card_json
+        if card_json['layout'] in ('adventure', 'modal_dfc', 'split'):
+            for face_json in card_json['card_faces'][1:]:
+                face_name = face_json['name']
+                if card_json['layout'] == 'modal_dfc':
+                    prefix, query, postfix = card_url.partition('?')
+                    face_url = prefix + '?back'
+                    if postfix:
+                        face_url += '&' + postfix
+                else:
+                    face_url = card_url
+                face_type_line = face_json['type_line']
+                face_mana_cost = parse_mana(face_json['mana_cost'])
+                face = CardFace(face_name, face_url, face_type_line, face_mana_cost)
+                back_faces.append(face)
 
     card_name = front_face_json['name']
+
+    if card_json['layout'] == 'token':
+        card_name += ' Token'
+
     card_type_line = front_face_json['type_line']
     card_mana_cost = parse_mana(front_face_json['mana_cost'])
 
-    card = Card(card_name, card_url, card_type_line, card_mana_cost)
+    card = Card(card_name, card_url, card_type_line, card_mana_cost, back_faces)
 
     cache[cache_index] = card
 
@@ -165,7 +190,7 @@ def generate_decklist(deck_path):
                     params['set'] = code
                 card = get_card('/cards/named', params=params)
 
-            count = int(match.group('count') or 0)
+            count = int(match.group('count'))
 
             section.cards.append((count, card))
 
