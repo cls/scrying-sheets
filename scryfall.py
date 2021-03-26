@@ -19,3 +19,15 @@ class Scryfall:
         print('GET', response.url, file=sys.stderr)
 
         return response
+
+    def get_list(self, url, params=None):
+        page = self.get(url, params=params).json()
+
+        while True:
+            for elem in page['data']:
+                yield elem
+
+            if not page['has_more']:
+                break
+
+            page = self.get(page['next_page']).json()
