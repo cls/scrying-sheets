@@ -6,17 +6,12 @@ import sys
 
 from scryfall import Scryfall
 
-class CardFace:
+class Card:
     def __init__(self, name, url, type_line, mana_cost):
         self.name = name
         self.url = url
         self.type_line = type_line
         self.mana_cost = mana_cost
-
-class Card (CardFace):
-    def __init__(self, name, url, type_line, mana_cost, back_faces):
-        super().__init__(name, url, type_line, mana_cost)
-        self.back_faces = back_faces
 
 class Section:
     def __init__(self, name, cards=None):
@@ -25,7 +20,7 @@ class Section:
 
     @property
     def total_count(self):
-        return sum(count for count, card in self.cards)
+        return sum(count or 0 for count, card in self.cards)
 
 class Symbol:
     def __init__(self, text, scryfall_url):
@@ -55,16 +50,13 @@ scryfall = Scryfall()
 
 loader = jinja2.FileSystemLoader('templates')
 
-env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
-
-env.filters['mdash'] = lambda s: s.replace('\N{EM DASH}', '&mdash;')
-env.filters['rsquo'] = lambda s: s.replace('\'', '&rsquo;')
+env = jinja2.Environment(loader=loader, autoescape=jinja2.select_autoescape(), keep_trailing_newline=True)
 
 template = env.get_template('decklist.html')
 
+title_pattern = re.compile(r'\((?P<code>[A-Z0-9]+)\) (?P<deck>.*)')
 card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
 mana_pattern = re.compile(r'\{[^}]+\}')
-set_pattern = re.compile(r'\(([A-Z0-9]+)\)')
 
 symbols = {}
 
@@ -91,54 +83,24 @@ def get_card(url, params=None):
 
     card_json = scryfall.get(url, params=params).json()
 
-    front_face_json = card_json
-
     card_url = card_json['scryfall_uri']
 
-    back_faces = []
-
-    if 'card_faces' in card_json:
+    if 'card_faces' in card_json and card_json['layout'] != 'split':
         front_face_json = card_json['card_faces'][0]
-        if card_json['layout'] in ('adventure', 'modal_dfc', 'split'):
-            for face_json in card_json['card_faces'][1:]:
-                face_name = face_json['name']
-                if card_json['layout'] == 'modal_dfc':
-                    prefix, query, postfix = card_url.partition('?')
-                    face_url = prefix + '?back'
-                    if postfix:
-                        face_url += '&' + postfix
-                else:
-                    face_url = card_url
-                face_type_line = face_json['type_line']
-                face_mana_cost = parse_mana(face_json['mana_cost'])
-                face = CardFace(face_name, face_url, face_type_line, face_mana_cost)
-                back_faces.append(face)
+    else:
+        front_face_json = card_json
 
     card_name = front_face_json['name']
-
-    if card_json['layout'] == 'token':
-        card_name += ' Token'
-
     card_type_line = front_face_json['type_line']
     card_mana_cost = parse_mana(front_face_json['mana_cost'])
 
-    card = Card(card_name, card_url, card_type_line, card_mana_cost, back_faces)
+    card = Card(card_name, card_url, card_type_line, card_mana_cost)
 
     cache[cache_index] = card
 
     return card
 
 sets = {}
-
-def repl_set_symbol(match):
-    code = match.group(1).lower()
-    if code in sets:
-        return sets[code]
-    set_json = scryfall.get('/sets/{}'.format(code)).json()
-    set_symbol = Symbol(set_json["name"], set_json['icon_svg_uri'])
-    sets[code] = set_symbol
-    set_symbol.save()
-    return '<img src="{}" alt="{}" title="{}">'.format(set_symbol.url, match.group(), set_symbol.text)
 
 def generate_decklist(deck_path):
     title = None
@@ -166,13 +128,16 @@ def generate_decklist(deck_path):
 
             if number:
                 card = get_card('/cards/{}/{}'.format(code.lower(), number))
+                if card.name != name:
+                    raise Exception("{} {} has name {!r}, expected {!r}".format(code, number, card.name, name))
             else:
                 params = {'exact': name}
                 if code:
                     params['set'] = code
                 card = get_card('/cards/named', params=params)
 
-            count = int(match.group('count'))
+            count_str = match.group('count')
+            count = int(count_str) if count_str else None
 
             section.cards.append((count, card))
 
@@ -180,9 +145,23 @@ def generate_decklist(deck_path):
 
     html_path = '{}.html'.format(deck_path_stem)
 
-    headline = set_pattern.sub(repl_set_symbol, title)
+    match = title_pattern.fullmatch(title)
 
-    html = template.render(title=title, headline=headline, sections=sections)
+    if match:
+        deck = match.group('deck')
+        code = match.group('code')
+        symbol = sets.get(code)
+        if not symbol:
+            set_json = scryfall.get('/sets/{}'.format(code.lower())).json()
+            symbol = Symbol(set_json['name'], set_json['icon_svg_uri'])
+            sets[code] = symbol
+            symbol.save()
+    else:
+        deck = title
+        code = None
+        symbol = None
+
+    html = template.render(title=title, deck=deck, code=code, symbol=symbol, sections=sections)
 
     with open(html_path, 'w') as html_file:
         html_file.write(html)

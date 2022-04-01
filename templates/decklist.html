@@ -6,10 +6,11 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>{{ headline }}</h1>
+  <h1>{% if code %}<img src="{{ symbol.url }}" alt="{{ code }}" title="{{ symbol.text }}"> {% endif %}{{ deck }}</h1>
   <table>
     {% for section in sections %}
     <tbody>
+
       <tr>
         <th>{{ section.total_count }}</th>
         <th>{{ section.name }}</th>
@@ -18,33 +19,10 @@
       <tr>
         <td>{{ count }}</td>
         <td>
-          <div class="name">
-            <a href="{{ card.url }}" title="{{ card.type_line|mdash }}">{{ card.name|rsquo }}</a>
-          </div>
-          {% if card.mana_cost %}
-          <div class="mana">
-            {% for symbol in card.mana_cost -%} <img src="{{ symbol.url }}" alt="{{ symbol.text }}"> {%- endfor %}
-          </div>
-          {% endif %}
+          <div class="name"><a href="{{ card.url }}" title="{{ card.type_line }}">{{ card.name }}</a></div>
+          {% if card.mana_cost %}<div class="mana">{% for mana in card.mana_cost %}<img src="{{ mana.url }}" alt="{{ mana.text }}">{% endfor %}</div>{% endif %}
         </td>
       </tr>
-      {% for face in card.back_faces %}
-      <tr>
-        <td></td>
-        <td>
-          <div class="name">
-            <a href="{{ face.url }}" title="{{ face.type_line }}">{{ face.name }}</a>
-          </div>
-          {% if face.mana_cost %}
-            <div class="mana">
-              {% for symbol in face.mana_cost -%}
-                <img src="{{ symbol.url }}" alt="{{ symbol.text }}">
-              {%- endfor %}
-            </div>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
       {% endfor %}
     </tbody>
     {% endfor %}
