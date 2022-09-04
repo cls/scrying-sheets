@@ -7,11 +7,12 @@ import sys
 from scryfall import Scryfall
 
 class Card:
-    def __init__(self, name, url, type_line, mana_cost):
+    def __init__(self, name, url, type_line, mana_cost, cmc):
         self.name = name
         self.url = url
         self.type_line = type_line
         self.mana_cost = mana_cost
+        self.cmc = cmc
 
 class Section:
     def __init__(self, name, cards=None):
@@ -94,11 +95,23 @@ def get_card(url, params=None):
     card_type_line = front_face_json['type_line']
     card_mana_cost = parse_mana(front_face_json['mana_cost'])
 
-    card = Card(card_name, card_url, card_type_line, card_mana_cost)
+    card_cmc = front_face_json['cmc']
+
+    card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc)
 
     cache[cache_index] = card
 
     return card
+
+def get_cmc(count_and_card):
+    count, card = count_and_card
+    return card.cmc
+
+def sort_by_cmc(sections):
+    for section in sections:
+        section.cards.sort(key=get_cmc)
+
+
 
 sets = {}
 
@@ -140,7 +153,9 @@ def generate_decklist(deck_path):
             count = int(count_str) if count_str else None
 
             section.cards.append((count, card))
-
+    # split functions here
+    sort_by_cmc(sections)
+    #
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
     html_path = '{}.html'.format(deck_path_stem)
