@@ -16,7 +16,7 @@ class Scryfall:
 
         response = requests.get(url, params=params)
 
-        print('GET', response.url, file=sys.stderr)
+        #print('GET', response.url, file=sys.stderr)
 
         return response
 
