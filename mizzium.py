@@ -7,12 +7,13 @@ import sys
 from scryfall import Scryfall
 
 class Card:
-    def __init__(self, name, url, type_line, mana_cost, cmc):
+    def __init__(self, name, url, type_line, mana_cost, cmc, colors):
         self.name = name
         self.url = url
         self.type_line = type_line
         self.mana_cost = mana_cost
         self.cmc = cmc
+        self.colors = colors
 
 class Section:
     def __init__(self, name, cards=None):
@@ -59,6 +60,8 @@ title_pattern = re.compile(r'\((?P<code>[A-Z0-9]+)\) (?P<deck>.*)')
 card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
 mana_pattern = re.compile(r'\{[^}]+\}')
 
+color_order = ['W', 'U', 'B', 'R', 'G']
+
 symbols = {}
 
 for json_entry in scryfall.get('/symbology').json()['data']:
@@ -95,21 +98,22 @@ def get_card(url, params=None):
     card_type_line = front_face_json['type_line']
     card_mana_cost = parse_mana(front_face_json['mana_cost'])
 
-    card_cmc = front_face_json['cmc']
+    card_cmc = card_json['cmc']
+    card_colors = card_json['colors']
 
-    card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc)
+    card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
 
     cache[cache_index] = card
 
     return card
 
-def get_cmc(count_and_card):
+def get_card_sort_key(count_and_card):
     count, card = count_and_card
-    return card.cmc
+    return (card.cmc, list(map(color_order.index, card.colors)), card.name)
 
-def sort_by_cmc(sections):
+def card_sort(sections):
     for section in sections:
-        section.cards.sort(key=get_cmc)
+        section.cards.sort(key=get_card_sort_key)
 
 
 
@@ -154,7 +158,7 @@ def generate_decklist(deck_path):
 
             section.cards.append((count, card))
     # split functions here
-    sort_by_cmc(sections)
+    card_sort(sections)
     #
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
