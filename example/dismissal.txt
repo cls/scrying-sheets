@@ -1,38 +1,38 @@
 (INV) Dismissal
 
 Creatures
-2 Faerie Squadron
-1 Tidal Visionary
-1 Duskwalker
-1 Nightscape Apprentice
 2 Dream Thrush
-1 Metathran Zombie
-1 Vodalian Hypnotist
+1 Duskwalker
+2 Faerie Squadron
 1 Hate Weaver
-3 Ravenous Rats
-1 Vodalian Zombie
+1 Metathran Zombie
+1 Nightscape Apprentice
 1 Phyrexian Infiltrator
-1 Urborg Emissary
-1 Stalking Assassin
-2 Urborg Drake
-2 Vodalian Serpent
+3 Ravenous Rats
 1 Slinking Serpent
+1 Stalking Assassin
+1 Tidal Visionary
+2 Urborg Drake
+1 Urborg Emissary
+1 Vodalian Hypnotist
+2 Vodalian Serpent
+1 Vodalian Zombie
 
 Instants & Sorceries
+1 Agonizing Demise
 1 Disrupt
 1 Opt
 1 Prohibit
-2 Probe
-1 Repulse
 3 Recoil
-1 Agonizing Demise
-1 Lobotomy
+1 Repulse
 1 Spite // Malice
+1 Lobotomy
+2 Probe
 
 Other Spells
 1 Cursed Flesh
-1 Drake-Skull Cameo
 1 Seer's Vision
+1 Drake-Skull Cameo
 
 Lands
 11 Island
