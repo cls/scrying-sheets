@@ -1,0 +1,12 @@
+a { color: inherit; text-decoration: inherit; }
+a:hover { color: #00579c; }
+body { color: #333; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; margin: 1.5em 0 1em; }
+img { height: 1em; width: 1em; }
+div.mana { float: right; margin-left: 0.75em; }
+div.mana img { border-radius: 500px; box-shadow: -0.06em 0.06em rgba(0,0,0,0.85); margin: 0 0.08em; }
+div.name { float: left; }
+h1 { font-size: 1.75em; font-weight: normal; margin-bottom: 0.5em; text-align: center; }
+table { border-spacing: 0.5em 0.25em; margin: auto; }
+th { text-align: left; padding: 0.25em 0; }
+tr :first-child { text-align: right; }
+tbody:first-child th { padding-top: 0; }
