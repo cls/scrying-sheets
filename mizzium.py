@@ -109,7 +109,7 @@ def get_card(url, params=None):
 
 def get_card_sort_key(count_and_card):
     count, card = count_and_card
-    return (card.cmc, list(map(color_order.index, card.colors)), card.name)
+    return (card.cmc, len(card.colors),list(map(color_order.index, card.colors)), card.name)
 
 def card_sort(sections):
     for section in sections:
