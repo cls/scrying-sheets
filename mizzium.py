@@ -99,7 +99,12 @@ def get_card(url, params=None):
     card_mana_cost = parse_mana(front_face_json['mana_cost'])
 
     card_cmc = card_json['cmc']
-    card_colors = card_json['colors']
+
+    # Some cards have two faces and we currently only want the mana from the 'front'
+    if 'colors' in card_json:
+        card_colors = card_json['colors']
+    else:
+        card_colors = front_face_json['colors']
 
     card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
 
