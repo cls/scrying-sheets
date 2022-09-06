@@ -31,3 +31,16 @@ class Scryfall:
                 break
 
             page = self.get(page['next_page']).json()
+
+    def post(self, url, json=None):
+        if url.startswith('/'):
+            url = self._host + url
+
+        time.sleep(0.1)
+
+        response = requests.post(url, json=json)
+
+        print('POST', response.url, file=sys.stderr)
+
+        return response
+        
