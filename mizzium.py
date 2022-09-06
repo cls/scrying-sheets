@@ -79,6 +79,8 @@ def parse_mana(mana_cost_json):
 
 cache = {}
 
+# This function is in theory obsolete now
+# The new method uses unpack_card and fetch_collection instead
 def get_card(url, params=None):
     cache_index = (url, tuple(params.items()) if params else ())
 
@@ -120,7 +122,44 @@ def card_sort(sections):
     for section in sections:
         section.cards.sort(key=get_card_sort_key)
 
+def unpack_card(card_json):
+    card_url = card_json['scryfall_uri']
+    if 'card_faces' in card_json and card_json['layout'] != 'split':
+        front_face_json = card_json['card_faces'][0]
+    else:
+        front_face_json = card_json
 
+    card_name = front_face_json['name']
+    card_type_line = front_face_json['type_line']
+    card_mana_cost = parse_mana(front_face_json['mana_cost'])
+
+    card_cmc = card_json['cmc']
+
+    # Some cards have two faces and we currently only want the mana from the 'front'
+    if 'colors' in card_json:
+        card_colors = card_json['colors']
+    else:
+        card_colors = front_face_json['colors']
+
+    card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
+
+    return card
+
+# This function gets the deck list as a set of cards, rather than fetching each card individually
+def fetch_collection(identifiers):
+
+    post_json = {"identifiers": identifiers}
+    
+    collection_json = scryfall.post('/cards/collection/', post_json).json()
+
+    collected_cards = {}
+
+    # Unpack the received cards before returning the fresh deck
+    for card in collection_json['data']:
+        temp_card = unpack_card(card)
+        collected_cards[temp_card.name] = temp_card
+
+    return collected_cards
 
 sets = {}
 
@@ -129,6 +168,9 @@ def generate_decklist(deck_path):
     sections = []
     section = None
 
+    identifiers = []
+    section_buffer = {}
+    
     with open(deck_path) as deck_file:
         for line in map(str.strip, deck_file):
             if not line:
@@ -141,30 +183,42 @@ def generate_decklist(deck_path):
 
             if section is None:
                 section = Section(line)
+                section_buffer[section]={}
                 sections.append(section)
                 continue
-
+            
             match = card_pattern.fullmatch(line)
 
             name, code, number = cache_index = match.group('name', 'code', 'number')
-
-            if number:
-                card = get_card('/cards/{}/{}'.format(code.lower(), number))
-                if card.name != name:
-                    raise Exception("{} {} has name {!r}, expected {!r}".format(code, number, card.name, name))
-            else:
-                params = {'exact': name}
-                if code:
-                    params['set'] = code
-                card = get_card('/cards/named', params=params)
-
             count_str = match.group('count')
             count = int(count_str) if count_str else None
 
-            section.cards.append((count, card))
-    # split functions here
+            section_buffer[section][name] = count
+            
+            identifier = {}
+
+            if number:
+                identifier['collector_number'] = number
+                identifier['set'] = code.lower()
+            else:
+                identifier['name'] = name
+                if code:
+                    identifier['set'] = code
+
+            identifiers.append(identifier)
+
+    
+    # Using the identifiers, get the cards from scryfall and unpack them
+    card_deck = fetch_collection(identifiers)
+
+    for section in sections:
+        for card_name, count in section_buffer[section].items():
+            section.cards.append((count,card_deck[card_name]))
+
+    # Sort the deck list by cmc, WUBRG, number of colours, alphabetical
     card_sort(sections)
-    #
+    
+    
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
     html_path = '{}.html'.format(deck_path_stem)
