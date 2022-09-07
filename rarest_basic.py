@@ -17,6 +17,8 @@ def rarest_basic(code):
         cards_in_set = []
 
         for card in scryfall.get_list('/cards/search', params={'q': '!{!r}'.format(name), 'unique': 'prints'}):
+            if 'illustration_id' not in card:
+                continue
             if not card['digital']:
                 illustrations.setdefault(card['illustration_id'], []).append(card)
             if card['set'] == code.lower():
