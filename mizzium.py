@@ -244,5 +244,6 @@ def generate_decklist(deck_path):
     with open(html_path, 'w') as html_file:
         html_file.write(html)
 
-for deck_path in sys.argv[1:]:
-    generate_decklist(deck_path)
+if __name__ == '__main__':
+    for deck_path in sys.argv[1:]:
+        generate_decklist(deck_path)

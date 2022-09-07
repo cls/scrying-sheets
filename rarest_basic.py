@@ -6,7 +6,7 @@ scryfall = Scryfall()
 
 basics = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest']
 
-for code in sys.argv[1:]:
+def rarest_basic(code):
     released_at = None
 
     def rarity(card_in_set):
@@ -26,3 +26,7 @@ for code in sys.argv[1:]:
         rarest = min(map(rarity, cards_in_set))
 
         print("{} ({}) {}".format(name, code, ' or '.join(card['collector_number'] for card in cards_in_set if rarity(card) == rarest)))
+
+if __name__ == '__main__':
+    for code in sys.argv[1:]:
+        rarest_basic(code)
