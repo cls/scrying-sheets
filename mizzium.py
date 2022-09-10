@@ -152,6 +152,9 @@ def fetch_collection(identifiers):
     
     collection_json = scryfall.post('/cards/collection/', post_json).json()
 
+    if collection_json['not_found']:
+        raise Exception("Could not find cards: {}".format(collection_json['not_found']))
+
     collected_cards = {}
 
     # Unpack the received cards before returning the fresh deck
