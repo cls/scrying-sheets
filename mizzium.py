@@ -15,6 +15,28 @@ class Card:
         self.cmc = cmc
         self.colors = colors
 
+    @staticmethod
+    def from_json(card_json):
+        card_url = card_json['scryfall_uri']
+        if 'card_faces' in card_json and card_json['layout'] != 'split':
+            front_face_json = card_json['card_faces'][0]
+        else:
+            front_face_json = card_json
+
+        card_name = front_face_json['name']
+        card_type_line = front_face_json['type_line']
+        card_mana_cost = parse_mana(front_face_json['mana_cost'])
+
+        card_cmc = card_json['cmc']
+
+        # Some cards have two faces and we currently only want the mana from the 'front'
+        if 'colors' in card_json:
+            card_colors = card_json['colors']
+        else:
+            card_colors = front_face_json['colors']
+
+        return Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
+
 
 class Section:
     def __init__(self, name, cards=None):
@@ -88,29 +110,6 @@ def card_sort(sections):
     for section in sections:
         section.cards.sort(key=get_card_sort_key)
 
-def unpack_card(card_json):
-    card_url = card_json['scryfall_uri']
-    if 'card_faces' in card_json and card_json['layout'] != 'split':
-        front_face_json = card_json['card_faces'][0]
-    else:
-        front_face_json = card_json
-
-    card_name = front_face_json['name']
-    card_type_line = front_face_json['type_line']
-    card_mana_cost = parse_mana(front_face_json['mana_cost'])
-
-    card_cmc = card_json['cmc']
-
-    # Some cards have two faces and we currently only want the mana from the 'front'
-    if 'colors' in card_json:
-        card_colors = card_json['colors']
-    else:
-        card_colors = front_face_json['colors']
-
-    card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
-
-    return card
-
 # This function gets the deck list as a set of cards, rather than fetching each card individually
 def fetch_collection(identifiers):
     post_json = {"identifiers": identifiers}
@@ -123,9 +122,9 @@ def fetch_collection(identifiers):
     collected_cards = {}
 
     # Unpack the received cards before returning the fresh deck
-    for card in collection_json['data']:
-        temp_card = unpack_card(card)
-        collected_cards[temp_card.name] = temp_card
+    for card_json in collection_json['data']:
+        card = Card.from_json(card_json)
+        collected_cards[card.name] = card
 
     return collected_cards
 
