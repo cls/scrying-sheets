@@ -1,5 +1,4 @@
 import requests
-import sys
 import time
 
 class Scryfall:
@@ -15,8 +14,6 @@ class Scryfall:
         time.sleep(0.1)
 
         response = requests.get(url, params=params)
-
-        #print('GET', response.url, file=sys.stderr)
 
         return response
 
@@ -40,7 +37,4 @@ class Scryfall:
 
         response = requests.post(url, json=json)
 
-        print('POST', response.url, file=sys.stderr)
-
         return response
-        

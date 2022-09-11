@@ -1,10 +1,10 @@
 import jinja2
-import json
 import os
 import re
 import sys
 
 from scryfall import Scryfall
+
 
 class Card:
     def __init__(self, name, url, type_line, mana_cost, cmc, colors):
@@ -15,6 +15,7 @@ class Card:
         self.cmc = cmc
         self.colors = colors
 
+
 class Section:
     def __init__(self, name, cards=None):
         self.name = name
@@ -23,6 +24,7 @@ class Section:
     @property
     def total_count(self):
         return sum(count or 0 for count, card in self.cards)
+
 
 class Symbol:
     def __init__(self, text, scryfall_url):
@@ -47,6 +49,7 @@ class Symbol:
             symbol_file.write(scryfall.get(self.scryfall_url).content)
 
         return self.url
+
 
 scryfall = Scryfall()
 
@@ -77,46 +80,9 @@ def parse_mana(mana_cost_json):
         mana_cost.append(symbol)
     return mana_cost
 
-cache = {}
-
-# This function is in theory obsolete now
-# The new method uses unpack_card and fetch_collection instead
-def get_card(url, params=None):
-    cache_index = (url, tuple(params.items()) if params else ())
-
-    if cache_index in cache:
-        return cache[cache_index]
-
-    card_json = scryfall.get(url, params=params).json()
-
-    card_url = card_json['scryfall_uri']
-
-    if 'card_faces' in card_json and card_json['layout'] != 'split':
-        front_face_json = card_json['card_faces'][0]
-    else:
-        front_face_json = card_json
-
-    card_name = front_face_json['name']
-    card_type_line = front_face_json['type_line']
-    card_mana_cost = parse_mana(front_face_json['mana_cost'])
-
-    card_cmc = card_json['cmc']
-
-    # Some cards have two faces and we currently only want the mana from the 'front'
-    if 'colors' in card_json:
-        card_colors = card_json['colors']
-    else:
-        card_colors = front_face_json['colors']
-
-    card = Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
-
-    cache[cache_index] = card
-
-    return card
-
 def get_card_sort_key(count_and_card):
     count, card = count_and_card
-    return (card.cmc, len(card.colors),list(map(color_order.index, card.colors)), card.name)
+    return (card.cmc, len(card.colors), list(map(color_order.index, card.colors)), card.name)
 
 def card_sort(sections):
     for section in sections:
@@ -147,9 +113,8 @@ def unpack_card(card_json):
 
 # This function gets the deck list as a set of cards, rather than fetching each card individually
 def fetch_collection(identifiers):
-
     post_json = {"identifiers": identifiers}
-    
+
     collection_json = scryfall.post('/cards/collection/', post_json).json()
 
     if collection_json['not_found']:
@@ -173,7 +138,7 @@ def generate_decklist(deck_path):
 
     identifiers = []
     section_buffer = {}
-    
+
     with open(deck_path) as deck_file:
         for line in map(str.strip, deck_file):
             if not line:
@@ -189,7 +154,7 @@ def generate_decklist(deck_path):
                 section_buffer[section]={}
                 sections.append(section)
                 continue
-            
+
             match = card_pattern.fullmatch(line)
 
             name, code, number = cache_index = match.group('name', 'code', 'number')
@@ -197,7 +162,7 @@ def generate_decklist(deck_path):
             count = int(count_str) if count_str else None
 
             section_buffer[section][name] = count
-            
+
             identifier = {}
 
             if number:
@@ -213,18 +178,16 @@ def generate_decklist(deck_path):
 
             identifiers.append(identifier)
 
-    
     # Using the identifiers, get the cards from scryfall and unpack them
-    card_deck = fetch_collection(identifiers)
+    collection = fetch_collection(identifiers)
 
     for section in sections:
         for card_name, count in section_buffer[section].items():
-            section.cards.append((count,card_deck[card_name]))
+            section.cards.append((count, collection[card_name]))
 
     # Sort the deck list by cmc, WUBRG, number of colours, alphabetical
     card_sort(sections)
-    
-    
+
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
     html_path = '{}.html'.format(deck_path_stem)
@@ -250,6 +213,8 @@ def generate_decklist(deck_path):
     with open(html_path, 'w') as html_file:
         html_file.write(html)
 
+
 if __name__ == '__main__':
     for deck_path in sys.argv[1:]:
+        print("Generating {}".format(deck_path), file=sys.stderr)
         generate_decklist(deck_path)
