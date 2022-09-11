@@ -119,14 +119,7 @@ def fetch_collection(identifiers):
     if collection_json['not_found']:
         raise Exception("Could not find cards: {}".format(collection_json['not_found']))
 
-    collected_cards = {}
-
-    # Unpack the received cards before returning the fresh deck
-    for card_json in collection_json['data']:
-        card = Card.from_json(card_json)
-        collected_cards[card.name] = card
-
-    return collected_cards
+    return list(map(Card.from_json, collection_json['data']))
 
 sets = {}
 
@@ -136,7 +129,6 @@ def generate_decklist(deck_path):
     section = None
 
     identifiers = []
-    section_buffer = {}
 
     with open(deck_path) as deck_file:
         for line in map(str.strip, deck_file):
@@ -150,7 +142,6 @@ def generate_decklist(deck_path):
 
             if section is None:
                 section = Section(line)
-                section_buffer[section]={}
                 sections.append(section)
                 continue
 
@@ -160,7 +151,9 @@ def generate_decklist(deck_path):
             count_str = match.group('count')
             count = int(count_str) if count_str else None
 
-            section_buffer[section][name] = count
+            # Leave index as a placeholder that we later use to obtain the card.
+            index = len(identifiers)
+            section.cards.append((count, index))
 
             identifier = {}
 
@@ -181,8 +174,7 @@ def generate_decklist(deck_path):
     collection = fetch_collection(identifiers)
 
     for section in sections:
-        for card_name, count in section_buffer[section].items():
-            section.cards.append((count, collection[card_name]))
+        section.cards = [(count, collection[index]) for count, index in section.cards]
 
     # Sort the deck list by cmc, WUBRG, number of colours, alphabetical
     card_sort(sections)
