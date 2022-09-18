@@ -184,7 +184,10 @@ def generate_decklist(deck_path):
             identifiers.append(identifier)
 
     # Using the identifiers, get the cards from scryfall and unpack them
-    collection = fetch_collection(identifiers)
+    # However, /cards/collection only fetches up to 75 cards at a time
+    collection = []
+    for i in range(0, len(identifiers), 75):
+        collection.extend(fetch_collection(identifiers[i:i+75]))
 
     for section in sections:
         section.cards = [(count, collection[index]) for count, index in section.cards]
