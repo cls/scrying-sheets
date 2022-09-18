@@ -1,0 +1,111 @@
+Kess, Dissident Mage
+
+Commander
+1 Kess, Dissident Mage
+
+Creatures
+1 Opposition Agent
+1 Simian Spirit Guide
+1 Malevolent Hermit
+1 Thassa's Oracle
+1 Phantasmal Image
+1 Ragavan, Nimble Pilferer
+1 Dragon's Rage Channeler
+1 Dockside Extortionist
+
+Instants & Sorceries
+1 Dispel
+1 Swan Song
+1 Flusterstorm
+1 Brain Freeze
+1 Resculpt
+1 Winds of Rebuke
+1 Delay
+1 Intuition
+1 Force of Negation
+1 Miscast
+1 Spell Pierce
+1 Mystical Tutor
+1 Pact of Negation
+1 Mental Misstep
+1 Consider
+1 Thought Scour
+1 Chain of Vapor
+1 Alchemist's Retrieval
+1 Pongify
+1 Fierce Guardianship
+1 Force of Will
+1 Ad Nauseam
+1 Siphon Insight
+1 Tainted Pact
+1 Cabal Ritual
+1 Abrade
+1 Deflecting Swat
+1 Entomb
+1 Dark Ritual
+1 Vampiric Tutor
+1 Demonic Consultation
+1 Windfall
+1 Gitaxian Probe
+1 Toxic Deluge
+1 Peer into the Abyss
+1 Mnemonic Betrayal
+1 Demonic Tutor
+1 Rite of Flame
+1 Gamble
+1 Wheel of Fortune
+1 Reanimate
+
+Other Spells
+1 Fellwar Stone
+1 Talisman of Dominance
+1 Talisman of Indulgence
+1 Chrome Mox
+1 Mox Opal
+1 Mox Diamond
+1 Lion's Eye Diamond
+1 Mana Crypt
+1 Mana Vault
+1 Sol Ring
+1 Cursed Totem
+1 Grinding Station
+1 Arcane Signet
+1 Lotus Petal
+1 Dimir Signet
+1 Mystic Remora
+1 Dress Down
+1 Rhystic Study
+1 Underworld Breach
+1 Necropotence
+1 Jace, Wielder of Mysteries
+
+Lands
+1 Gemstone Caverns
+1 Tarnished Citadel
+1 Exotic Orchard
+1 Watery Grave
+1 Steam Vents
+1 Blood Crypt
+1 Underground Sea
+1 Morphic Pool
+1 Training Center
+1 Luxury Suite
+1 Cavern of Souls
+1 City of Brass
+1 Mana Confluence
+1 Arid Mesa
+1 Wooded Foothills
+1 Marsh Flats
+1 Verdant Catacombs
+1 Bloodstained Mire
+1 Misty Rainforest
+1 Flooded Strand
+1 Scalding Tarn
+1 Polluted Delta
+1 Command Tower
+1 Otawara, Soaring City
+1 Snow-Covered Island
+1 Island
+1 Swamp
+1 Ancient Tomb
+1 Emergence Zone
