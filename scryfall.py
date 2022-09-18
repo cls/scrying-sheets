@@ -15,6 +15,8 @@ class Scryfall:
 
         response = requests.get(url, params=params)
 
+        response.raise_for_status() # raise if not 200 OK
+
         return response
 
     def get_list(self, url, params=None):
@@ -36,5 +38,7 @@ class Scryfall:
         time.sleep(0.1)
 
         response = requests.post(url, json=json)
+
+        response.raise_for_status() # raise if not 200 OK
 
         return response
