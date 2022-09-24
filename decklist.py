@@ -50,7 +50,8 @@ class Section:
 
 
 class Symbol:
-    def __init__(self, text, scryfall_url):
+    def __init__(self, code, text, scryfall_url):
+        self.code = code
         self.text = text
         self.scryfall_url = scryfall_url
         self.url = None
@@ -102,10 +103,9 @@ color_order = ['W', 'U', 'B', 'R', 'G']
 
 symbols = {}
 
-for json_entry in scryfall.get('/symbology').json()['data']:
-    text = json_entry['symbol']
-    scryfall_url = json_entry['svg_uri']
-    symbols[text] = Symbol(text, scryfall_url)
+for symbol_json in scryfall.get('/symbology').json()['data']:
+    code = symbol_json['symbol']
+    symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
 
 def parse_mana(mana_cost_json):
     mana_cost = []
@@ -203,19 +203,18 @@ def generate_decklist(deck_path):
 
     if match:
         deck = match.group('deck')
-        code = match.group('code')
+        code = match.group('code').lower()
         symbol = sets.get(code)
         if not symbol:
-            set_json = scryfall.get('/sets/{}'.format(code.lower())).json()
-            symbol = Symbol(set_json['name'], set_json['icon_svg_uri'])
+            set_json = scryfall.get('/sets/{}'.format(code)).json()
+            symbol = Symbol(set_json['code'].upper(), set_json['name'], set_json['icon_svg_uri'])
             sets[code] = symbol
             symbol.save()
     else:
         deck = title
-        code = None
         symbol = None
 
-    html = template.render(title=title, deck=deck, code=code, symbol=symbol, sections=sections)
+    html = template.render(title=title, deck=deck, symbol=symbol, sections=sections)
 
     with open(html_path, 'w') as html_file:
         html_file.write(html)

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>{% if code %}<img src="{{ symbol.url }}" alt="{{ code }}" title="{{ symbol.text }}"> {% endif %}{{ deck|korvecdal }}</h1>
+  <h1>{% if symbol %}<img src="{{ symbol.url }}" alt="{{ symbol.code }}" title="{{ symbol.text }}"> {% endif %}{{ deck|korvecdal }}</h1>
   <table>
     {% for section in sections %}
     <tbody>
@@ -21,7 +21,7 @@
         <td>{{ count }}</td>
         <td>
           <div class="name"><a href="{{ card.url }}" title="{{ card.type_line }}">{{ card.name|korvecdal }}</a></div>
-          {% if card.mana_cost %}<div class="mana">{% for mana in card.mana_cost %}<img src="{{ mana.url }}" alt="{{ mana.text }}">{% endfor %}</div>{% endif %}
+          {% if card.mana_cost %}<div class="mana">{% for mana in card.mana_cost %}<img src="{{ mana.url }}" alt="{{ mana.code }}">{% endfor %}</div>{% endif %}
         </td>
       </tr>
       {% endfor %}
