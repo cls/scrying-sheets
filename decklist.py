@@ -103,13 +103,16 @@ color_order = ['W', 'U', 'B', 'R', 'G']
 
 symbols = {}
 
-for symbol_json in scryfall.get('/symbology').json()['data']:
-    code = symbol_json['symbol']
-    symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
-
 def parse_mana(mana_cost_json):
     mana_cost = []
     for mana in mana_pattern.findall(mana_cost_json):
+        # If we don't know this mana symbol then we must not have fetched /symbology yet.
+        if mana not in symbols:
+            for symbol_json in scryfall.get_list('/symbology'):
+                if symbol_json['represents_mana']:
+                    code = symbol_json['symbol']
+                    symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
+        # If we still don't know the mana symbol then we'll raise an exception.
         symbol = symbols[mana]
         symbol.save()
         mana_cost.append(symbol)
