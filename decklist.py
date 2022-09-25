@@ -2,10 +2,16 @@ import os
 import re
 import sys
 
+from functools import total_ordering
+
 from environment import environment
 from scryfall import Scryfall
 
 
+color_order = ['W', 'U', 'B', 'R', 'G']
+
+
+@total_ordering
 class Card:
     def __init__(self, name, url, type_line, mana_cost, cmc, colors):
         self.name = name
@@ -37,6 +43,15 @@ class Card:
 
         return Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
 
+    def __eq__(self, other):
+        return self.url == other.url
+
+    def __lt__(self, other):
+        return self._sort_key() < other._sort_key()
+
+    def _sort_key(self):
+        return (self.cmc, len(self.colors), list(map(color_order.index, self.colors)), self.name)
+
 
 class Section:
     def __init__(self, name, cards=None):
@@ -45,7 +60,7 @@ class Section:
 
     @property
     def total_count(self):
-        return sum(count or 0 for count, card in self.cards)
+        return sum(count or 0 for card, count in self.cards)
 
 
 class Symbol:
@@ -83,8 +98,6 @@ mana_pattern = re.compile(r'\{[^}]+\}')
 
 template = environment.get_template('decklist.html')
 
-color_order = ['W', 'U', 'B', 'R', 'G']
-
 symbols = {}
 
 def parse_mana(mana_cost_json):
@@ -101,14 +114,6 @@ def parse_mana(mana_cost_json):
         symbol.save()
         mana_cost.append(symbol)
     return mana_cost
-
-def get_card_sort_key(count_and_card):
-    _count, card = count_and_card
-    return (card.cmc, len(card.colors), list(map(color_order.index, card.colors)), card.name)
-
-def card_sort(sections):
-    for section in sections:
-        section.cards.sort(key=get_card_sort_key)
 
 # This function gets the deck list as a set of cards, rather than fetching each card individually
 def fetch_collection(identifiers):
@@ -153,7 +158,7 @@ def generate_decklist(deck_path):
 
             # Leave index as a placeholder that we later use to obtain the card.
             index = len(identifiers)
-            section.cards.append((count, index))
+            section.cards.append((index, count))
 
             identifier = {}
 
@@ -177,10 +182,7 @@ def generate_decklist(deck_path):
         collection.extend(fetch_collection(identifiers[i:i+75]))
 
     for section in sections:
-        section.cards = [(count, collection[index]) for count, index in section.cards]
-
-    # Sort the deck list by cmc, WUBRG, number of colours, alphabetical
-    card_sort(sections)
+        section.cards = [(collection[index], count) for index, count in section.cards]
 
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 

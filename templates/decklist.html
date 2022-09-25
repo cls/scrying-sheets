@@ -16,7 +16,7 @@
         <th>{{ section.total_count }}</th>
         <th>{{ section.name }}</th>
       </tr>
-      {% for count, card in section.cards %}
+      {% for card, count in section.cards|sort %}
       <tr>
         <td>{{ count }}</td>
         <td>
