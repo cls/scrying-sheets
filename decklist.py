@@ -2,9 +2,7 @@ import os
 import re
 import sys
 
-import jinja2
-import markupsafe
-
+from environment import environment
 from scryfall import Scryfall
 
 
@@ -79,27 +77,11 @@ class Symbol:
 
 scryfall = Scryfall()
 
-loader = jinja2.FileSystemLoader('templates')
-
-env = jinja2.Environment(loader=loader, autoescape=jinja2.select_autoescape(), keep_trailing_newline=True)
-
 title_pattern = re.compile(r'\((?P<code>[A-Z0-9]+)\) (?P<deck>.*)')
 card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
 mana_pattern = re.compile(r'\{[^}]+\}')
-korvecdal_pattern = re.compile(r'\b(en|il)-(Kor|Vec|Dal)\b')
 
-@jinja2.pass_eval_context
-def korvecdal(eval_ctx, value):
-    if eval_ctx.autoescape:
-        value = markupsafe.escape(value)
-    result = korvecdal_pattern.sub(r'<em>\1</em>-\2', str(value))
-    if eval_ctx.autoescape:
-        result = markupsafe.Markup(result)
-    return result
-
-env.filters['korvecdal'] = korvecdal
-
-template = env.get_template('decklist.html')
+template = environment.get_template('decklist.html')
 
 color_order = ['W', 'U', 'B', 'R', 'G']
 
