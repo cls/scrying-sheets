@@ -2,12 +2,13 @@ import sys
 
 from scryfall import Scryfall
 
+
 scryfall = Scryfall()
 
 basics = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest']
 
 def rarest_basic(code):
-    released_at = None
+    set_release = None
 
     def rarity(card_in_set):
         return sum(1 for card in illustrations.get(card_in_set['illustration_id'], []) if card['released_at'] < set_release)
@@ -16,7 +17,7 @@ def rarest_basic(code):
         illustrations = {}
         cards_in_set = []
 
-        for card in scryfall.get_list('/cards/search', params={'q': '!{!r}'.format(name), 'unique': 'prints'}):
+        for card in scryfall.get_list('/cards/search', params={'q': f'!{name!r}', 'unique': 'prints'}):
             if 'illustration_id' not in card:
                 continue
             if not card['digital']:
@@ -27,8 +28,11 @@ def rarest_basic(code):
 
         rarest = min(map(rarity, cards_in_set))
 
-        print("{} ({}) {}".format(name, code, ' or '.join(card['collector_number'] for card in cards_in_set if rarity(card) == rarest)))
+        collector_numbers = " or ".join(card['collector_number'] for card in cards_in_set if rarity(card) == rarest)
+
+        print(f"{name} ({code}) {collector_numbers}")
+
 
 if __name__ == '__main__':
-    for code in sys.argv[1:]:
-        rarest_basic(code)
+    for arg in sys.argv[1:]:
+        rarest_basic(arg)

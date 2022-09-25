@@ -1,8 +1,9 @@
-import jinja2
-import markupsafe
 import os
 import re
 import sys
+
+import jinja2
+import markupsafe
 
 from scryfall import Scryfall
 
@@ -60,7 +61,8 @@ class Symbol:
         if self.url:
             return self.url
 
-        self.url = 'img/{}'.format(os.path.basename(self.scryfall_url))
+        basename = os.path.basename(self.scryfall_url)
+        self.url = f'img/{basename}'
 
         query_pos = self.url.find('?')
         if query_pos >= 0:
@@ -119,7 +121,7 @@ def parse_mana(mana_cost_json):
     return mana_cost
 
 def get_card_sort_key(count_and_card):
-    count, card = count_and_card
+    _count, card = count_and_card
     return (card.cmc, len(card.colors), list(map(color_order.index, card.colors)), card.name)
 
 def card_sort(sections):
@@ -133,7 +135,7 @@ def fetch_collection(identifiers):
     collection_json = scryfall.post('/cards/collection/', post_json).json()
 
     if collection_json['not_found']:
-        raise Exception("Could not find cards: {}".format(collection_json['not_found']))
+        raise Exception(f"Could not find cards: {collection_json['not_found']}")
 
     return list(map(Card.from_json, collection_json['data']))
 
@@ -163,7 +165,7 @@ def generate_decklist(deck_path):
 
             match = card_pattern.fullmatch(line)
 
-            name, code, number = cache_index = match.group('name', 'code', 'number')
+            name, code, number = match.group('name', 'code', 'number')
             count_str = match.group('count')
             count = int(count_str) if count_str else None
 
@@ -200,7 +202,7 @@ def generate_decklist(deck_path):
 
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
-    html_path = '{}.html'.format(deck_path_stem)
+    html_path = f'{deck_path_stem}.html'
 
     match = title_pattern.fullmatch(title)
 
@@ -209,7 +211,7 @@ def generate_decklist(deck_path):
         code = match.group('code').lower()
         symbol = sets.get(code)
         if not symbol:
-            set_json = scryfall.get('/sets/{}'.format(code)).json()
+            set_json = scryfall.get(f'/sets/{code}').json()
             symbol = Symbol(set_json['code'].upper(), set_json['name'], set_json['icon_svg_uri'])
             sets[code] = symbol
             symbol.save()
@@ -224,6 +226,6 @@ def generate_decklist(deck_path):
 
 
 if __name__ == '__main__':
-    for deck_path in sys.argv[1:]:
-        print("Generating {}".format(deck_path), file=sys.stderr)
-        generate_decklist(deck_path)
+    for arg in sys.argv[1:]:
+        print(f"Generating {arg}", file=sys.stderr)
+        generate_decklist(arg)

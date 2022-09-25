@@ -1,5 +1,7 @@
-import requests
 import time
+
+import requests
+
 
 class Scryfall:
     DEFAULT_HOST = 'https://api.scryfall.com'
