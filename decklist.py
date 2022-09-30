@@ -83,11 +83,13 @@ class Symbol:
 
         if not os.path.exists('img'):
             os.mkdir('img')
+        elif os.path.exists(self.url):
+            return # Assume the existing file will do.
+
+        image_data = scryfall.get(self.scryfall_url).content
 
         with open(self.url, 'wb') as symbol_file:
-            symbol_file.write(scryfall.get(self.scryfall_url).content)
-
-        return self.url
+            symbol_file.write(image_data)
 
 
 scryfall = Scryfall()
