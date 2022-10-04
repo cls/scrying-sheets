@@ -108,7 +108,7 @@ def parse_mana(mana_cost_json):
         # If we don't know this mana symbol then we must not have fetched /symbology yet.
         if mana not in symbols:
             for symbol_json in scryfall.get_list('/symbology'):
-                if symbol_json['represents_mana']:
+                if symbol_json['represents_mana']: # NB. ['appears_in_mana_costs'] is unreliable.
                     code = symbol_json['symbol']
                     symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
         # If we still don't know the mana symbol then we'll raise an exception.
