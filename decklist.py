@@ -166,14 +166,14 @@ def generate_decklist(deck_path):
 
             if number:
                 identifier['collector_number'] = number
-                identifier['set'] = code.lower()
             else:
                 # /cards/collection apparently can't identify split cards by
                 # their full name (e.g. Fire // Ice), so instead we use only
                 # their first name (e.g. Fire), which is still unique.
                 identifier['name'] = name.split('//')[0].strip()
-                if code:
-                    identifier['set'] = code
+
+            if code:
+                identifier['set'] = code
 
             identifiers.append(identifier)
 
