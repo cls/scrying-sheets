@@ -72,7 +72,7 @@ class Symbol:
 
     def save(self):
         if self.url:
-            return self.url
+            return
 
         basename = os.path.basename(self.scryfall_url)
         self.url = f'img/{basename}'
@@ -137,7 +137,7 @@ def generate_decklist(deck_path):
 
     identifiers = []
 
-    with open(deck_path) as deck_file:
+    with open(deck_path, encoding='utf-8') as deck_file:
         for line in map(str.strip, deck_file):
             if not line:
                 section = None
@@ -147,7 +147,7 @@ def generate_decklist(deck_path):
                 title = line
                 continue
 
-            if section is None:
+            if not section:
                 section = Section(line)
                 sections.append(section)
                 continue
@@ -219,7 +219,7 @@ def generate_decklist(deck_path):
 
     html = template.render(title=title, deck=deck, symbol=symbol, sections=sections)
 
-    with open(html_path, 'w') as html_file:
+    with open(html_path, 'w', encoding='utf-8') as html_file:
         html_file.write(html)
 
 
