@@ -187,20 +187,28 @@ def generate_decklist(deck_path):
         section.cards = [(collection[index], count) for index, count in section.cards]
 
     maindeck_index = None
+    commanders = None
 
     for i, section in enumerate(sections):
-        if section.name == 'Deck':
+        if section.name == 'Commander':
+            commanders = section.total_count
+
+        elif section.name == 'Deck':
             if maindeck_index is not None:
                 raise Exception(f"{deck_path} contains more than one 'Deck' section")
             maindeck_index = i
 
-            format_minima = (
-                40, # Limited
-                60, # Constructed
-                99, # Commander
-            )
-            if section.total_count not in format_minima:
-                print(f"Warning: {deck_path} maindeck contains {section.total_count} cards", file=sys.stderr)
+            if commanders is None:
+                format_minima = (
+                    40, # Limited
+                    60, # Constructed
+                    80, # Constructed with Yorion
+                )
+                if section.total_count not in format_minima:
+                    print(f"Warning: {deck_path} maindeck contains {section.total_count} cards", file=sys.stderr)
+            else:
+                if section.total_count + commanders != 100:
+                    print(f"Warning: {deck_path} maindeck contains {section.total_count} + {commanders} cards", file=sys.stderr)
 
             creatures = Section('Creatures')
             instants_and_sorceries = Section('Instants & Sorceries')
