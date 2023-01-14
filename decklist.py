@@ -186,6 +186,18 @@ def generate_decklist(deck_path):
     for section in sections:
         section.cards = [(collection[index], count) for index, count in section.cards]
 
+    total_count = sum(section.total_count for section in sections)
+
+    format_minima = (
+         40, # Limited
+         60, # Constructed maindeck
+         75, # Constructed with sideboard
+        100, # Commander
+    )
+
+    if total_count not in format_minima:
+        print(f"Warning: {deck_path} contains {total_count} cards", file=sys.stderr)
+
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 
     html_path = f'{deck_path_stem}.html'
