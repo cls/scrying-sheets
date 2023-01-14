@@ -186,17 +186,50 @@ def generate_decklist(deck_path):
     for section in sections:
         section.cards = [(collection[index], count) for index, count in section.cards]
 
-    total_count = sum(section.total_count for section in sections)
+    maindeck_index = None
 
-    format_minima = (
-         40, # Limited
-         60, # Constructed maindeck
-         75, # Constructed with sideboard
-        100, # Commander
-    )
+    for i, section in enumerate(sections):
+        if section.name == 'Deck':
+            if maindeck_index is not None:
+                raise Exception(f"{deck_path} contains more than one 'Deck' section")
+            maindeck_index = i
 
-    if total_count not in format_minima:
-        print(f"Warning: {deck_path} contains {total_count} cards", file=sys.stderr)
+            format_minima = (
+                40, # Limited
+                60, # Constructed
+                99, # Commander
+            )
+            if section.total_count not in format_minima:
+                print(f"Warning: {deck_path} maindeck contains {section.total_count} cards", file=sys.stderr)
+
+            creatures = Section('Creatures')
+            instants_and_sorceries = Section('Instants & Sorceries')
+            other_spells = Section('Other Spells')
+            lands = Section('Lands')
+
+            for card, count in section.cards:
+                types = card.type_line.split()
+                if 'Creature' in types:
+                    new_section = creatures
+                elif 'Instant' in types or 'Sorcery' in types:
+                    new_section = instants_and_sorceries
+                elif 'Land' not in types:
+                    new_section = other_spells
+                else:
+                    new_section = lands
+                new_section.cards.append((card, count))
+
+            maindeck_sections = []
+            for new_section in (creatures, instants_and_sorceries, other_spells, lands):
+                if new_section.cards:
+                    maindeck_sections.append(new_section)
+
+        elif section.name == 'Sideboard':
+            if section.total_count != 15:
+                print(f"Warning: {deck_path} sideboard contains {section.total_count} cards", file=sys.stderr)
+
+    if maindeck_index is not None:
+        sections[maindeck_index:maindeck_index+1] = maindeck_sections
 
     deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
 

@@ -3,7 +3,7 @@ Kess, Dissident Mage
 Commander
 1 Kess, Dissident Mage
 
-Creatures
+Deck
 1 Opposition Agent
 1 Simian Spirit Guide
 1 Malevolent Hermit
@@ -12,8 +12,6 @@ Creatures
 1 Ragavan, Nimble Pilferer
 1 Dragon's Rage Channeler
 1 Dockside Extortionist
-
-Instants & Sorceries
 1 Dispel
 1 Swan Song
 1 Flusterstorm
@@ -55,8 +53,6 @@ Instants & Sorceries
 1 Gamble
 1 Wheel of Fortune
 1 Reanimate
-
-Other Spells
 1 Fellwar Stone
 1 Talisman of Dominance
 1 Talisman of Indulgence
@@ -78,8 +74,6 @@ Other Spells
 1 Underworld Breach
 1 Necropotence
 1 Jace, Wielder of Mysteries
-
-Lands
 1 Gemstone Caverns
 1 Tarnished Citadel
 1 Exotic Orchard

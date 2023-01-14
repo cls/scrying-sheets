@@ -1,20 +1,16 @@
 Izzet Flash
 
-Creatures
+Deck
 4 Brineborn Cutthroat (M20)
 4 Brazen Borrower (ELD) 281
 4 Gadwick, the Wizened (ELD)
 4 Bonecrusher Giant (ELD) 291
-
-Instants & Sorceries
 4 Opt (INV)
 2 Negate (RIX)
 3 Quench (RNA)
 2 Scorching Dragonfire (ELD)
 4 Ionize (GRN)
 3 Ral's Outburst (WAR)
-
-Lands
 1 Blast Zone (WAR)
 2 Castle Vantress (ELD)
 2 Fabled Passage (ELD)
