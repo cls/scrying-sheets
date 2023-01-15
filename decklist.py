@@ -117,25 +117,13 @@ def parse_mana(mana_cost_json):
         mana_cost.append(symbol)
     return mana_cost
 
-# This function gets the deck list as a set of cards, rather than fetching each card individually
-def fetch_collection(identifiers):
-    post_json = {"identifiers": identifiers}
+def frozendict(d):
+    return tuple(sorted(d.items()))
 
-    collection_json = scryfall.post('/cards/collection/', post_json).json()
-
-    if collection_json['not_found']:
-        raise Exception(f"Could not find cards: {collection_json['not_found']}")
-
-    return list(map(Card.from_json, collection_json['data']))
-
-sets = {}
-
-def generate_decklist(deck_path):
+def parse_decklist(deck_path, placeholders):
     title = None
     sections = []
     section = None
-
-    identifiers = []
 
     with open(deck_path, encoding='utf-8') as deck_file:
         for line in map(str.strip, deck_file):
@@ -158,10 +146,6 @@ def generate_decklist(deck_path):
             count_str = match.group('count')
             count = int(count_str) if count_str else None
 
-            # Leave index as a placeholder that we later use to obtain the card.
-            index = len(identifiers)
-            section.cards.append((index, count))
-
             identifier = {}
 
             if number:
@@ -175,16 +159,46 @@ def generate_decklist(deck_path):
             if code:
                 identifier['set'] = code
 
-            identifiers.append(identifier)
+            # Leave identifier as a placeholder that we later use to obtain the card.
+            placeholder = frozendict(identifier)
+            section.cards.append((placeholder, count))
+            placeholders.add(placeholder)
+
+    return title, sections
+
+def fetch_collection(placeholders):
+    identifiers = list(map(dict, placeholders))
+    cards = []
 
     # Using the identifiers, get the cards from scryfall and unpack them
     # However, /cards/collection only fetches up to 75 cards at a time
-    collection = []
-    for i in range(0, len(identifiers), 75):
-        collection.extend(fetch_collection(identifiers[i:i+75]))
+    size = 75
+    count = (len(identifiers) + size - 1) // size
+
+    for i in range(count):
+        print(f"Fetching collection {i+1} of {count}")
+        post_json = {"identifiers": identifiers[i*size:(i+1)*size]}
+
+        collection_json = scryfall.post('/cards/collection/', post_json).json()
+        if collection_json['not_found']:
+            raise Exception(f"Could not find cards: {collection_json['not_found']}")
+
+        collection = map(Card.from_json, collection_json['data'])
+        cards.extend(collection)
+
+    return dict(zip(placeholders, cards))
+
+sets = {}
+
+def generate_html(deck_path, decklist, collection):
+    title, sections = decklist
+
+    deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
+    html_path = f'{deck_path_stem}.html'
+    print(f"Generating {html_path}")
 
     for section in sections:
-        section.cards = [(collection[index], count) for index, count in section.cards]
+        section.cards = [(collection[placeholder], count) for placeholder, count in section.cards]
 
     maindeck_index = None
     commanders = None
@@ -239,10 +253,6 @@ def generate_decklist(deck_path):
     if maindeck_index is not None:
         sections[maindeck_index:maindeck_index+1] = maindeck_sections
 
-    deck_path_stem, _ = os.path.splitext(os.path.basename(deck_path))
-
-    html_path = f'{deck_path_stem}.html'
-
     match = title_pattern.fullmatch(title)
 
     if match:
@@ -265,6 +275,14 @@ def generate_decklist(deck_path):
 
 
 if __name__ == '__main__':
-    for arg in sys.argv[1:]:
-        print(f"Generating {arg}", file=sys.stderr)
-        generate_decklist(arg)
+    decklists = {}
+    placeholders = set()
+
+    for path in sys.argv[1:]:
+        decklist = parse_decklist(path, placeholders)
+        decklists[path] = decklist
+
+    collection = fetch_collection(placeholders)
+
+    for path, decklist in decklists.items():
+        generate_html(path, decklist, collection)
