@@ -2,8 +2,6 @@ import os
 import re
 import sys
 
-from functools import total_ordering
-
 from environment import environment
 from scryfall import Scryfall
 
@@ -11,7 +9,6 @@ from scryfall import Scryfall
 color_order = ['W', 'U', 'B', 'R', 'G']
 
 
-@total_ordering
 class Card:
     def __init__(self, name, url, type_line, mana_cost, cmc, colors):
         self.name = name
@@ -46,11 +43,41 @@ class Card:
     def __eq__(self, other):
         return self.url == other.url
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __lt__(self, other):
-        return self._sort_key() < other._sort_key()
+        for key, other_key in zip(self._sort_key(), other._sort_key()):
+            if key != other_key:
+                return key < other_key
+        return False
+
+    def __gt__(self, other):
+        for key, other_key in zip(self._sort_key(), other._sort_key()):
+            if key != other_key:
+                return key > other_key
+        return False
+
+    def __le__(self, other):
+        return not (self > other)
+
+    def __ge__(self, other):
+        return not (self < other)
 
     def _sort_key(self):
-        return (self.cmc, len(self.colors), list(map(color_order.index, self.colors)), self.name)
+        # 1. Order no-cost last.
+        yield not self.mana_cost
+        # 2. Order by mana value.
+        yield self.cmc
+        # 3. Order by number of colors.
+        yield len(self.colors)
+        # 4. Order by colors' position on the color wheel.
+        for color in self.colors:
+            yield color_order.index(color)
+        # 5. Order by name alphabetically.
+        yield self.name
+        # 6. Tiebreaker: URL.
+        yield self.url
 
 
 class Section:
