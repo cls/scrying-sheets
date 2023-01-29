@@ -280,7 +280,13 @@ def generate_html(deck_path, decklist, collection):
                 if cards_in_category:
                     types_in_category = types_by_category[category]
                     category_words = filter(lambda card_type: card_type in types_in_category, category)
-                    category_words = map(lambda word: f"{word[:-1]}ies" if word[-1] == 'y' else f"{word}s", category_words)
+                    if len(cards_in_category) == 1:
+                        card, count = cards_in_category[0]
+                        singular = count == 1
+                    else:
+                        singular = False
+                    if not singular:
+                        category_words = map(lambda word: f"{word[:-1]}ies" if word[-1] == 'y' else f"{word}s", category_words)
                     new_section = Section(" & ".join(category_words))
                     new_section.cards = cards_in_category
                     maindeck_sections.append(new_section)
