@@ -227,8 +227,9 @@ def generate_html(deck_path, decklist, collection):
     for section in sections:
         section.cards = [(collection[placeholder], count) for placeholder, count in section.cards]
 
-    maindeck_index = None
     commanders = None
+    maindeck_index = None
+    maindeck_sections = []
 
     for i, section in enumerate(sections):
         if section.name == 'Commander':
@@ -251,26 +252,37 @@ def generate_html(deck_path, decklist, collection):
                 if section.total_count + commanders != 100:
                     print(f"Warning: {deck_path} maindeck contains {section.total_count} + {commanders} cards", file=sys.stderr)
 
-            creatures = Section('Creatures')
-            instants_and_sorceries = Section('Instants & Sorceries')
-            other_spells = Section('Other Spells')
-            lands = Section('Lands')
+            categories = [
+                ('Land',),
+                ('Creature',),
+                ('Planeswalker',),
+                ('Instant', 'Sorcery'),
+                ('Artifact', 'Enchantment'),
+            ]
+            # Land is treated specially: it is the first filtered, yet the last rendered.
+            rendered_categories = categories[1:] + categories[:1]
+
+            cards_by_category = {category: [] for category in categories}
+            types_by_category = {category: set() for category in categories}
 
             for card, count in section.cards:
-                types = card.type_line.split()
-                if 'Creature' in types:
-                    new_section = creatures
-                elif 'Instant' in types or 'Sorcery' in types:
-                    new_section = instants_and_sorceries
-                elif 'Land' not in types:
-                    new_section = other_spells
+                for category in categories:
+                    card_types = set(filter(lambda card_type: card_type in card.type_line, category))
+                    if card_types:
+                        cards_by_category[category].append((card, count))
+                        types_by_category[category].update(card_types)
+                        break
                 else:
-                    new_section = lands
-                new_section.cards.append((card, count))
+                    raise Exception(f"Unrecognized card type line {card.type_line}")
 
-            maindeck_sections = []
-            for new_section in (creatures, instants_and_sorceries, other_spells, lands):
-                if new_section.cards:
+            for category in rendered_categories:
+                cards_in_category = cards_by_category[category]
+                if cards_in_category:
+                    types_in_category = types_by_category[category]
+                    category_words = filter(lambda card_type: card_type in types_in_category, category)
+                    category_words = map(lambda word: f"{word[:-1]}ies" if word[-1] == 'y' else f"{word}s", category_words)
+                    new_section = Section(" & ".join(category_words))
+                    new_section.cards = cards_in_category
                     maindeck_sections.append(new_section)
 
         elif section.name == 'Sideboard':
