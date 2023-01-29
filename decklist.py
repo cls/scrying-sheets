@@ -59,10 +59,10 @@ class Card:
         return False
 
     def __le__(self, other):
-        return not (self > other)
+        return self == other or self < other
 
     def __ge__(self, other):
-        return not (self < other)
+        return self == other or self > other
 
     def _sort_key(self):
         # 1. Order no-cost last.
