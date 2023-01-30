@@ -127,19 +127,29 @@ mana_pattern = re.compile(r'\{[^}]+\}')
 
 template = environment.get_template('decklist.html')
 
-symbols = {}
+mana_symbols = {}
+set_symbols = {}
+
+def populate_mana_symbols():
+    for symbol_json in scryfall.get_list('/symbology'):
+        if symbol_json['represents_mana']: # NB. ['appears_in_mana_costs'] is unreliable.
+            code = symbol_json['symbol']
+            mana_symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
+
+def populate_set_symbols():
+    for set_json in scryfall.get_list('/sets'):
+        code = set_json['code']
+        symbol = Symbol(code.upper(), set_json['name'], set_json['icon_svg_uri'])
+        set_symbols[code] = symbol
 
 def parse_mana(mana_cost_json):
     mana_cost = []
     for mana in mana_pattern.findall(mana_cost_json):
         # If we don't know this mana symbol then we must not have fetched /symbology yet.
-        if mana not in symbols:
-            for symbol_json in scryfall.get_list('/symbology'):
-                if symbol_json['represents_mana']: # NB. ['appears_in_mana_costs'] is unreliable.
-                    code = symbol_json['symbol']
-                    symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
+        if mana not in mana_symbols:
+            populate_mana_symbols()
         # If we still don't know the mana symbol then we'll raise an exception.
-        symbol = symbols[mana]
+        symbol = mana_symbols[mana]
         symbol.save()
         mana_cost.append(symbol)
     return mana_cost
@@ -217,8 +227,6 @@ def fetch_collection(placeholders):
 
 def pluralize(word):
     return f"{word[:-1]}ies" if word[-1] == 'y' else f"{word}s"
-
-sets = {}
 
 def generate_html(deck_path, decklist, collection):
     title, sections = decklist
@@ -305,12 +313,10 @@ def generate_html(deck_path, decklist, collection):
     if match:
         deck = match.group('deck')
         code = match.group('code').lower()
-        symbol = sets.get(code)
-        if not symbol:
-            set_json = scryfall.get(f'/sets/{code}').json()
-            symbol = Symbol(set_json['code'].upper(), set_json['name'], set_json['icon_svg_uri'])
-            sets[code] = symbol
-            symbol.save()
+        if code not in set_symbols:
+            populate_set_symbols()
+        symbol = set_symbols[code]
+        symbol.save()
     else:
         deck = title
         symbol = None
