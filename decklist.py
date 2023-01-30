@@ -215,6 +215,9 @@ def fetch_collection(placeholders):
 
     return dict(zip(placeholders, cards))
 
+def pluralize(word):
+    return f"{word[:-1]}ies" if word[-1] == 'y' else f"{word}s"
+
 sets = {}
 
 def generate_html(deck_path, decklist, collection):
@@ -267,7 +270,7 @@ def generate_html(deck_path, decklist, collection):
 
             for card, count in section.cards:
                 for category in categories:
-                    card_types = set(filter(lambda card_type: card_type in card.type_line, category))
+                    card_types = set(filter(card.type_line.__contains__, category))
                     if card_types:
                         cards_by_category[category].append((card, count))
                         types_by_category[category].update(card_types)
@@ -279,16 +282,15 @@ def generate_html(deck_path, decklist, collection):
                 cards_in_category = cards_by_category[category]
                 if cards_in_category:
                     types_in_category = types_by_category[category]
-                    category_words = filter(lambda card_type: card_type in types_in_category, category)
+                    category_words = filter(types_in_category.__contains__, category)
                     if len(cards_in_category) == 1:
                         card, count = cards_in_category[0]
                         singular = count == 1
                     else:
                         singular = False
                     if not singular:
-                        category_words = map(lambda word: f"{word[:-1]}ies" if word[-1] == 'y' else f"{word}s", category_words)
-                    new_section = Section(" & ".join(category_words))
-                    new_section.cards = cards_in_category
+                        category_words = map(pluralize, category_words)
+                    new_section = Section(" & ".join(category_words), cards_in_category)
                     maindeck_sections.append(new_section)
 
         elif section.name == 'Sideboard':
