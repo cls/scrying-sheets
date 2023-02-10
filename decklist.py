@@ -182,7 +182,7 @@ def parse_decklist(deck_path, placeholders):
 
             name, code, number = match.group('name', 'code', 'number')
             count_str = match.group('count')
-            count = int(count_str) if count_str else None
+            count = int(count_str) if count_str else 0
 
             identifier = {}
 

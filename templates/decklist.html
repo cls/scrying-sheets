@@ -13,12 +13,12 @@
     <tbody>
 
       <tr>
-        <th>{{ section.total_count }}</th>
+        <th>{{ section.total_count or "" }}</th>
         <th>{{ section.name }}</th>
       </tr>
       {% for card, count in section.cards|sort %}
       <tr>
-        <td>{{ count }}</td>
+        <td>{{ count or "" }}</td>
         <td>
           <div class="name"><a href="{{ card.url }}" title="{{ card.type_line }}">{{ card.name|korvecdal }}</a></div>
           {% if card.mana_cost %}<div class="mana">{% for mana in card.mana_cost %}<img src="{{ mana.url }}" alt="{{ mana.alt }}">{% endfor %}</div>{% endif %}
