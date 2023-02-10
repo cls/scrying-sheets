@@ -91,9 +91,9 @@ class Section:
 
 
 class Symbol:
-    def __init__(self, code, text, scryfall_url):
-        self.code = code
-        self.text = text
+    def __init__(self, alt, title, scryfall_url):
+        self.alt = alt
+        self.title = title
         self.scryfall_url = scryfall_url
         self.url = None
 
@@ -139,7 +139,8 @@ def populate_mana_symbols():
 def populate_set_symbols():
     for set_json in scryfall.get_list('/sets'):
         code = set_json['code']
-        symbol = Symbol(code.upper(), set_json['name'], set_json['icon_svg_uri'])
+        alt = f'({code.upper()})'
+        symbol = Symbol(alt, set_json['name'], set_json['icon_svg_uri'])
         set_symbols[code] = symbol
 
 def parse_mana(mana_cost_json):
