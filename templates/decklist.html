@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>{% if symbol %}<img src="{{ symbol.url }}" alt="{{ symbol.alt }}" title="{{ symbol.title }}"> {% endif %}{{ deck|korvecdal }}</h1>
+  <h1>{% if set %}<img src="{{ set.icon_svg }}" alt="({{ set.code|upper }})" title="{{ set.name }}"> {% endif %}{{ deck }}</h1>
   <table>
     {% for section in sections %}
     <tbody>
@@ -16,12 +16,12 @@
         <th>{{ section.total_count or "" }}</th>
         <th>{{ section.name }}</th>
       </tr>
-      {% for card, count in section.cards|sort %}
+      {% for card, count in section.cards|sort(attribute="cmc,name") %}
       <tr>
         <td>{{ count or "" }}</td>
         <td>
-          <div class="name"><a href="{{ card.url }}" title="{{ card.type_line }}">{{ card.name|korvecdal }}</a></div>
-          {% if card.mana_cost %}<div class="mana">{% for mana in card.mana_cost %}<img src="{{ mana.url }}" alt="{{ mana.alt }}">{% endfor %}</div>{% endif %}
+          <div class="name"><a href="{{ card.scryfall_uri }}" title="{{ card.front_face.type_line }}">{{ card.front_face.name }}</a></div>
+          {% if card.mana_cost %}<div class="mana">{% for mana in card.front_face.mana_cost|mana_symbols %}<img src="{{ mana.svg }}" alt="{{ mana.symbol }}">{% endfor %}</div>{% endif %}
         </td>
       </tr>
       {% endfor %}

@@ -3,81 +3,7 @@ import re
 import sys
 
 from environment import environment
-from scryfall import Scryfall
-
-
-color_order = ['W', 'U', 'B', 'R', 'G']
-
-
-class Card:
-    def __init__(self, name, url, type_line, mana_cost, cmc, colors):
-        self.name = name
-        self.url = url
-        self.type_line = type_line
-        self.mana_cost = mana_cost
-        self.cmc = cmc
-        self.colors = colors
-
-    @staticmethod
-    def from_json(card_json):
-        card_url = card_json['scryfall_uri']
-        if 'card_faces' in card_json and card_json['layout'] != 'split':
-            front_face_json = card_json['card_faces'][0]
-        else:
-            front_face_json = card_json
-
-        card_name = front_face_json['name']
-        card_type_line = front_face_json['type_line']
-        card_mana_cost = parse_mana(front_face_json['mana_cost'])
-
-        card_cmc = card_json['cmc']
-
-        # Some cards have two faces and we currently only want the mana from the 'front'
-        if 'colors' in card_json:
-            card_colors = card_json['colors']
-        else:
-            card_colors = front_face_json['colors']
-
-        return Card(card_name, card_url, card_type_line, card_mana_cost, card_cmc, card_colors)
-
-    def __eq__(self, other):
-        return self.url == other.url
-
-    def __ne__(self, other):
-        return not (self == other)
-
-    def __lt__(self, other):
-        for key, other_key in zip(self._sort_key(), other._sort_key()):
-            if key != other_key:
-                return key < other_key
-        return False
-
-    def __gt__(self, other):
-        for key, other_key in zip(self._sort_key(), other._sort_key()):
-            if key != other_key:
-                return key > other_key
-        return False
-
-    def __le__(self, other):
-        return self == other or self < other
-
-    def __ge__(self, other):
-        return self == other or self > other
-
-    def _sort_key(self):
-        # 1. Order no-cost last.
-        yield not self.mana_cost
-        # 2. Order by mana value.
-        yield self.cmc
-        # 3. Order by number of colors.
-        yield len(self.colors)
-        # 4. Order by colors' position on the color wheel.
-        for color in self.colors:
-            yield color_order.index(color)
-        # 5. Order by name alphabetically.
-        yield self.name
-        # 6. Tiebreaker: URL.
-        yield self.url
+from scry import Card, Set
 
 
 class Section:
@@ -90,70 +16,29 @@ class Section:
         return sum(count or 0 for card, count in self.cards)
 
 
-class Symbol:
-    def __init__(self, alt, title, scryfall_url):
-        self.alt = alt
-        self.title = title
-        self.scryfall_url = scryfall_url
-        self.url = None
-
-    def save(self):
-        if self.url:
-            return
-
-        basename = os.path.basename(self.scryfall_url)
-        self.url = f'img/{basename}'
-
-        query_pos = self.url.find('?')
-        if query_pos >= 0:
-            self.url = self.url[:query_pos]
-
-        if not os.path.exists('img'):
-            os.mkdir('img')
-        elif os.path.exists(self.url):
-            return # Assume the existing file will do.
-
-        image_data = scryfall.get(self.scryfall_url).content
-
-        with open(self.url, 'wb') as symbol_file:
-            symbol_file.write(image_data)
-
-
-scryfall = Scryfall()
+def card_order(self):
+    front = self.front_face()
+    # 1. Order no-cost last.
+    yield not front.mana_cost
+    # 2. Order by mana value.
+    yield front.cmc
+    # 3. Order by number of colors.
+    yield len(front.colors)
+    # 4. Order by colors' position on the color wheel.
+    for color in front.colors:
+        yield 'WUBRG'.index(color)
+    # 5. Order by name alphabetically.
+    yield front.name
+    # 6. Tiebreaker: URI.
+    yield self.uri
 
 title_pattern = re.compile(r'\((?P<code>[A-Z0-9]+)\) (?P<deck>.*)')
 card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
-mana_pattern = re.compile(r'\{[^}]+\}')
 
 template = environment.get_template('decklist.html')
 
 mana_symbols = {}
 set_symbols = {}
-
-def populate_mana_symbols():
-    for symbol_json in scryfall.get_list('/symbology'):
-        if symbol_json['represents_mana']: # NB. ['appears_in_mana_costs'] is unreliable.
-            code = symbol_json['symbol']
-            mana_symbols[code] = Symbol(code, symbol_json['english'], symbol_json['svg_uri'])
-
-def populate_set_symbols():
-    for set_json in scryfall.get_list('/sets'):
-        code = set_json['code']
-        alt = f'({code.upper()})'
-        symbol = Symbol(alt, set_json['name'], set_json['icon_svg_uri'])
-        set_symbols[code] = symbol
-
-def parse_mana(mana_cost_json):
-    mana_cost = []
-    for mana in mana_pattern.findall(mana_cost_json):
-        # If we don't know this mana symbol then we must not have fetched /symbology yet.
-        if mana not in mana_symbols:
-            populate_mana_symbols()
-        # If we still don't know the mana symbol then we'll raise an exception.
-        symbol = mana_symbols[mana]
-        symbol.save()
-        mana_cost.append(symbol)
-    return mana_cost
 
 def frozendict(d):
     return tuple(sorted(d.items()))
@@ -206,23 +91,8 @@ def parse_decklist(deck_path, placeholders):
 
 def fetch_collection(placeholders):
     identifiers = list(map(dict, placeholders))
-    cards = []
 
-    # Using the identifiers, get the cards from scryfall and unpack them
-    # However, /cards/collection only fetches up to 75 cards at a time
-    size = 75
-    count = (len(identifiers) + size - 1) // size
-
-    for i in range(count):
-        print(f"Fetching collection {i+1} of {count}")
-        post_json = {"identifiers": identifiers[i*size:(i+1)*size]}
-
-        collection_json = scryfall.post('/cards/collection/', post_json).json()
-        if collection_json['not_found']:
-            raise Exception(f"Could not find cards: {collection_json['not_found']}")
-
-        collection = map(Card.from_json, collection_json['data'])
-        cards.extend(collection)
+    cards = Card.collection(identifiers)
 
     return dict(zip(placeholders, cards))
 
@@ -314,15 +184,16 @@ def generate_html(deck_path, decklist, collection):
     if match:
         deck = match.group('deck')
         code = match.group('code').lower()
+        global set_symbols
         if code not in set_symbols:
-            populate_set_symbols()
+            set_symbols = {symbol.code: symbol for symbol in Set.list()}
         symbol = set_symbols[code]
-        symbol.save()
+        symbol.store_icon_svg()
     else:
         deck = title
         symbol = None
 
-    html = template.render(title=title, deck=deck, symbol=symbol, sections=sections)
+    html = template.render(title=title, deck=deck, set=symbol, sections=sections)
 
     with open(html_path, 'w', encoding='utf-8') as html_file:
         html_file.write(html)
