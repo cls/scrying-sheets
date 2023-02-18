@@ -4,6 +4,8 @@ import requests
 import sys
 import time
 
+from functools import total_ordering
+
 
 class Scry:
     API = 'https://api.scryfall.com'
@@ -13,7 +15,7 @@ class Scry:
 
     def __str__(self):
         return self.uri
- 
+
     def __repr__(self):
         return f'Scry({self.uri!r})'
 
@@ -78,10 +80,7 @@ class Object:
         return Object(json) if isinstance(json, dict) and 'object' in json else Object._map(json)
 
     def _store(self, name):
-        if hasattr(self, name) and getattr(self, name):
-            return
-
-        uri = self._json[f'{name}_uri']
+        uri = getattr(self, name)
         basename = os.path.basename(str(uri))
 
         path = f'img/{basename}'
@@ -89,17 +88,16 @@ class Object:
         if query_pos >= 0:
             path = path[:query_pos]
 
-        setattr(self, name, path)
-
         if not os.path.exists('img'):
             os.mkdir('img')
-        elif os.path.exists(path):
-            return # Assume the existing file will do.
 
-        image_data = uri.get().content
+        if not os.path.exists(path):
+            image_data = uri.get().content
 
-        with open(self.svg, 'wb') as image_file:
-            image_file.write(image_data)
+            with open(path, 'wb') as image_file:
+                image_file.write(image_data)
+
+        return path
 
 
 class Error(Object, object='error'):
@@ -142,8 +140,8 @@ class Set(Object, object='set'):
         if 'search_uri' in json:
             self.search_uri = Scry(json['search_uri'])
 
-    def store_icon_svg(self):
-        self._store('icon_svg')
+    def icon_svg(self):
+        return self._store('icon_svg_uri')
 
     @staticmethod
     def list(**kwargs):
@@ -165,16 +163,18 @@ class Set(Object, object='set'):
 class Card(Object, object='card'):
     def __init__(self, json):
         super().__init__(json)
+        if 'mana_cost' in json:
+            self.mana = Mana(json['mana_cost'])
         if 'prints_search_uri' in json:
             self.prints_search_uri = Scry(json['prints_search_uri'])
         if 'rulings_uri' in json:
             self.rulings_uri = Scry(json['rulings_uri'])
         if 'scryfall_uri' in json:
             self.scryfall_uri = Scry(json['scryfall_uri'])
-        if 'card_faces' in json and self.layout != 'split':
-            self.front_face = json['card_faces'][0]
-        else:
-            self.front_face = self
+
+    @property
+    def front(self):
+        return self.card_faces[0] if 'card_faces' in self._json and self.layout != 'split' else self
 
     @staticmethod
     def search(q, **kwargs):
@@ -241,7 +241,10 @@ class Card(Object, object='card'):
 
 
 class CardFace(Object, object='card_face'):
-    pass
+    def __init__(self, json):
+        super().__init__(json)
+        if 'mana_cost' in json:
+            self.mana = Mana(json['mana_cost'])
 
 
 class RelatedCard(Object, object='related_card'):
@@ -274,15 +277,83 @@ class CardSymbol(Object, object='card_symbol'):
     def __init__(self, json):
         super().__init__(json)
         if 'svg_uri' in json:
-            self.svg_uri = Scry(self.svg_uri)
-        self.svg = None
+            self.svg_uri = Scry(json['svg_uri'])
 
-    def store_svg(self):
-        self._store('svg')
+    def svg(self):
+        return self._store('svg_uri')
 
     @staticmethod
     def list(**kwargs):
         return Object.get('/symbology', **kwargs)
+
+
+@total_ordering
+class Color:
+    def __init__(self, code):
+        self._code = code
+
+    def __str__(self):
+        return self._code
+
+    def __eq__(self, other):
+        return self._code == other._code
+
+    def __lt__(self, other):
+        return self._sort_key() < other._sort_key()
+
+    def _sort_key(self):
+        return 'WUBRG'.index(self._code)
+
+    def __hash__(self):
+        return hash(self._code)
+
+
+@total_ordering
+class Mana:
+    _pattern = re.compile(r'\{[^}]+\}')
+    _symbols = None
+
+    def __init__(self, cost):
+        self.cost = cost
+        if Mana._symbols is None:
+            Mana._symbols = {symbol.symbol: symbol for symbol in CardSymbol.list() if symbol.represents_mana}
+        self.symbols = []
+        self.cmc = 0
+        colors = set()
+        for code in Mana._pattern.findall(cost):
+            symbol = Mana._symbols[code]
+            self.symbols.append(symbol)
+            self.cmc += symbol.cmc
+            colors.update(map(Color, symbol.colors))
+        self.colors = list(colors)
+
+    def __iter__(self):
+        return iter(self.symbols)
+
+    @property
+    def colorless(self):
+        return len(self.colors) == 0
+
+    @property
+    def monocolored(self):
+        return len(self.colors) == 1
+
+    @property
+    def multicolored(self):
+        return len(self.colors) >= 2
+
+    def __eq__(self, other):
+        return self.cost == other.cost
+
+    def __lt__(self, other):
+        result = self._sort_key() < other._sort_key()
+        return result
+
+    def _sort_key(self):
+        return (self.cmc, len(self.colors), self.colors)
+
+    def __bool__(self):
+        return bool(self.cost)
 
 
 class ManaCost(Object, object='mana_cost'):

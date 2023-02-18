@@ -9,28 +9,12 @@ from scry import Card, Set
 class Section:
     def __init__(self, name, cards=None):
         self.name = name
-        self.cards = cards or []
+        self.cards = cards or {}
 
     @property
     def total_count(self):
-        return sum(count or 0 for card, count in self.cards)
+        return sum(self.cards.values())
 
-
-def card_order(self):
-    front = self.front_face()
-    # 1. Order no-cost last.
-    yield not front.mana_cost
-    # 2. Order by mana value.
-    yield front.cmc
-    # 3. Order by number of colors.
-    yield len(front.colors)
-    # 4. Order by colors' position on the color wheel.
-    for color in front.colors:
-        yield 'WUBRG'.index(color)
-    # 5. Order by name alphabetically.
-    yield front.name
-    # 6. Tiebreaker: URI.
-    yield self.uri
 
 title_pattern = re.compile(r'\((?P<code>[A-Z0-9]+)\) (?P<deck>.*)')
 card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
@@ -84,7 +68,7 @@ def parse_decklist(deck_path, placeholders):
 
             # Leave identifier as a placeholder that we later use to obtain the card.
             placeholder = frozendict(identifier)
-            section.cards.append((placeholder, count))
+            section.cards[placeholder] = count
             placeholders.add(placeholder)
 
     return title, sections
@@ -107,7 +91,7 @@ def generate_html(deck_path, decklist, collection):
     print(f"Generating {html_path}")
 
     for section in sections:
-        section.cards = [(collection[placeholder], count) for placeholder, count in section.cards]
+        section.cards = {collection[placeholder]: count for placeholder, count in section.cards.items()}
 
     commanders = None
     maindeck_index = None
@@ -144,14 +128,14 @@ def generate_html(deck_path, decklist, collection):
             # Land is treated specially: it is the first filtered, yet the last rendered.
             rendered_categories = categories[1:] + categories[:1]
 
-            cards_by_category = {category: [] for category in categories}
+            cards_by_category = {category: {} for category in categories}
             types_by_category = {category: set() for category in categories}
 
-            for card, count in section.cards:
+            for card, count in section.cards.items():
                 for category in categories:
-                    card_types = set(filter(card.type_line.__contains__, category))
+                    card_types = set(filter(card.front.type_line.__contains__, category))
                     if card_types:
-                        cards_by_category[category].append((card, count))
+                        cards_by_category[category][card] = count
                         types_by_category[category].update(card_types)
                         break
                 else:
@@ -163,8 +147,7 @@ def generate_html(deck_path, decklist, collection):
                     types_in_category = types_by_category[category]
                     category_words = filter(types_in_category.__contains__, category)
                     if len(cards_in_category) == 1:
-                        card, count = cards_in_category[0]
-                        singular = count == 1
+                        singular = next(iter(cards_in_category.values())) == 1
                     else:
                         singular = False
                     if not singular:
@@ -188,7 +171,6 @@ def generate_html(deck_path, decklist, collection):
         if code not in set_symbols:
             set_symbols = {symbol.code: symbol for symbol in Set.list()}
         symbol = set_symbols[code]
-        symbol.store_icon_svg()
     else:
         deck = title
         symbol = None
