@@ -10,7 +10,7 @@ basics = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest']
 def rarest_basic(code):
     set_release = None
 
-    def rarity(card_in_set):
+    def get_rarity(card_in_set):
         return sum(1 for card in illustrations.get(card_in_set['illustration_id'], []) if card['released_at'] < set_release)
 
     for name in basics:
@@ -26,11 +26,15 @@ def rarest_basic(code):
                 cards_in_set.append(card)
                 set_release = card['released_at']
 
-        rarest = min(map(rarity, cards_in_set))
+        by_rarity = sorted((get_rarity(card), card['collector_number']) for card in cards_in_set)
 
-        collector_numbers = " or ".join(card['collector_number'] for card in cards_in_set if rarity(card) == rarest)
+        print(f"{name} ({code.upper()})", end='')
 
-        print(f"{name} ({code}) {collector_numbers}")
+        sep = ":"
+        for rarity, number in by_rarity:
+            print(f"{sep} {number} ({rarity})", end='')
+            sep = ","
+        print()
 
 
 if __name__ == '__main__':
