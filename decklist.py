@@ -124,6 +124,7 @@ def generate_html(deck_path, decklist, collection):
                 ('Planeswalker',),
                 ('Instant', 'Sorcery'),
                 ('Artifact', 'Enchantment'),
+                ('Battle',),
             ]
             # Land is treated specially: it is the first filtered, yet the last rendered.
             rendered_categories = categories[1:] + categories[:1]
