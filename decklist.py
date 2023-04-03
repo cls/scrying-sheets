@@ -157,7 +157,7 @@ def generate_html(deck_path, decklist, collection):
                     maindeck_sections.append(new_section)
 
         elif section.name == 'Sideboard':
-            if section.total_count != 15:
+            if section.total_count not in (0, 15):
                 print(f"Warning: {deck_path} sideboard contains {section.total_count} cards", file=sys.stderr)
 
     if maindeck_index is not None:
