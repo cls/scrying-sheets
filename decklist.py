@@ -17,7 +17,7 @@ class Section:
 
 
 title_pattern = re.compile(r'\((?P<code>[A-Z0-9]+)\) (?P<deck>.*)')
-card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+))?)?')
+card_pattern = re.compile(r'((?P<count>[0-9]+) +)?(?P<name>[^(]*[^( ])(?: +\((?P<code>[A-Z0-9]+)\)(?: (?P<number>[0-9]+[a-z]?))?)?')
 
 template = environment.get_template('decklist.html')
 
@@ -48,6 +48,8 @@ def parse_decklist(deck_path, placeholders):
                 continue
 
             match = card_pattern.fullmatch(line)
+            if not match:
+                raise Exception(f"Failed to parse line: {line!r}")
 
             name, code, number = match.group('name', 'code', 'number')
             count_str = match.group('count')
