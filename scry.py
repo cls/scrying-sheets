@@ -1,3 +1,4 @@
+import math
 import os
 import re
 import requests
@@ -163,6 +164,8 @@ class Set(Object, object='set'):
 class Card(Object, object='card'):
     def __init__(self, json):
         super().__init__(json)
+        if 'colors' in json:
+            self.colors = list(map(Color, json['colors']))
         if 'mana_cost' in json:
             self.mana = Mana(json['mana_cost'])
         if 'prints_search_uri' in json:
@@ -171,6 +174,38 @@ class Card(Object, object='card'):
             self.rulings_uri = Scry(json['rulings_uri'])
         if 'scryfall_uri' in json:
             self.scryfall_uri = Scry(json['scryfall_uri'])
+
+    @property
+    def cmc_or_inf(self):
+        return self.cmc if self.front.mana.symbols else math.inf
+
+    @property
+    def frame_rank(self):
+        # Frame rank represents the general card categorisation within sets:
+        #  0. Colorless
+        #  1. White
+        #  2. Blue
+        #  3. Black
+        #  4. Red
+        #  5. Green
+        #  6. Multicolored
+        #  7. Colorless artifact
+        #  8. Land
+        if 'Land' in self.front.type_line:
+            return 8
+        # Adventures are multi-faced but their faces have no recorded color.
+        # However, we can't check for layout == 'adventure' because then any
+        # future heterochromatic Adventure would break. It's not pretty, but
+        # let's use the front's color if it exists and the card's otherwise.
+        colors = self.front.colors if hasattr(self.front, 'colors') else self.colors
+        if len(colors) == 1:
+            return colors[0].rank + 1
+        elif len(colors) > 1:
+            return 6
+        elif 'Artifact' in self.front.type_line:
+            return 7
+        else:
+            return 0
 
     @property
     def front(self):
@@ -243,6 +278,8 @@ class Card(Object, object='card'):
 class CardFace(Object, object='card_face'):
     def __init__(self, json):
         super().__init__(json)
+        if 'colors' in json:
+            self.colors = list(map(Color, json['colors']))
         if 'mana_cost' in json:
             self.mana = Mana(json['mana_cost'])
 
@@ -299,16 +336,16 @@ class Color:
         return self._code == other._code
 
     def __lt__(self, other):
-        return self._sort_key() < other._sort_key()
+        return self.rank < other.rank
 
-    def _sort_key(self):
+    @property
+    def rank(self):
         return 'WUBRG'.index(self._code)
 
     def __hash__(self):
         return hash(self._code)
 
 
-@total_ordering
 class Mana:
     _pattern = re.compile(r'\{[^}]+\}')
     _symbols = None
@@ -341,19 +378,6 @@ class Mana:
     @property
     def multicolored(self):
         return len(self.colors) >= 2
-
-    def __eq__(self, other):
-        return self.cost == other.cost
-
-    def __lt__(self, other):
-        result = self._sort_key() < other._sort_key()
-        return result
-
-    def _sort_key(self):
-        return (self.cmc, len(self.colors), self.colors)
-
-    def __bool__(self):
-        return bool(self.cost)
 
 
 class ManaCost(Object, object='mana_cost'):

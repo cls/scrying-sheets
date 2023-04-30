@@ -16,7 +16,7 @@
         <th>{{ section.total_count or "" }}</th>
         <th>{{ section.name }}</th>
       </tr>
-      {% for card, count in section.cards.items()|sort(attribute="0.front.mana,0.front.name") %}
+      {% for card, count in section.cards.items()|sort(attribute="0.cmc_or_inf,0.frame_rank,0.front.name") %}
       <tr>
         <td>{{ count or "" }}</td>
         <td>
