@@ -26,8 +26,12 @@
         <td>
           <div class="name">
             <a href="{{ card.scryfall_uri }}" title="{{ card.front.type_line }}">
+              {% if 'Card' in card.front.type_line %}
+              {{ card.name }} Card
+              {% else %}
               {{ card.front.name }}
               {% if 'Token' in card.front.type_line %}Token{% endif %}
+              {% endif %}
             </a>
           </div>
           {% if card.front.mana %}

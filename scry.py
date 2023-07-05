@@ -191,7 +191,13 @@ class Card(Object, object='card'):
         #  6. Multicolored
         #  7. Colorless artifact
         #  8. Land
-        if 'Land' in self.front.type_line:
+        #  9. Emblem
+        # 10. Card
+        if self.front.type_line in ('Card', 'Dungeon'):
+            return 10
+        elif 'Emblem' in self.front.type_line:
+            return 9
+        elif 'Land' in self.front.type_line:
             return 8
         # Adventures are multi-faced but their faces have no recorded color.
         # However, we can't check for layout == 'adventure' because then any
