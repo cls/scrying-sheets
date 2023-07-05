@@ -7,11 +7,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>{% if set %}<img src="{{ set.icon_svg() }}" alt="({{ set.code|upper }})" title="{{ set.name }}"> {% endif %}{{ deck }}</h1>
+  <h1>
+    {% if set %}
+    <img src="{{ set.icon_svg() }}" alt="({{ set.code|upper }})" title="{{ set.name }}">
+    {% endif %}
+    {{ deck }}
+  </h1>
   <table>
     {% for section in sections %}
     <tbody>
-
       <tr>
         <th>{{ section.total_count or "" }}</th>
         <th>{{ section.name }}</th>
@@ -20,8 +24,19 @@
       <tr>
         <td>{{ count or "" }}</td>
         <td>
-          <div class="name"><a href="{{ card.scryfall_uri }}" title="{{ card.front.type_line }}">{{ card.front.name }}</a></div>
-          {% if card.front.mana %}<div class="mana">{% for mana in card.front.mana %}<img src="{{ mana.svg() }}" alt="{{ mana.symbol }}">{% endfor %}</div>{% endif %}
+          <div class="name">
+            <a href="{{ card.scryfall_uri }}" title="{{ card.front.type_line }}">
+              {{ card.front.name }}
+              {% if 'Token' in card.front.type_line %}Token{% endif %}
+            </a>
+          </div>
+          {% if card.front.mana %}
+          <div class="mana">
+            {% for mana in card.front.mana -%}
+            <img src="{{ mana.svg() }}" alt="{{ mana.symbol }}">
+            {%- endfor %}
+          </div>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
