@@ -1,0 +1,17 @@
+[project]
+name = "scrying-sheets"
+version = "0.1.0"
+description = "Static site generator for Magic decklists using Scryfall"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "jinja2>=3.1.6",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.1",
+    "ruff>=0.12.12",
+    "types-requests>=2.32.4.20250809",
+]
