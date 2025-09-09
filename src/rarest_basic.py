@@ -1,6 +1,6 @@
 import sys
 
-from scryfall import Scryfall
+from .scryfall import Scryfall
 
 
 scryfall = Scryfall()

@@ -3,8 +3,8 @@ import re
 import sys
 from typing import Any
 
-from environment import environment
-from scry import Card, Set
+from .environment import environment
+from .scry import Card, Set
 
 
 class Section:
